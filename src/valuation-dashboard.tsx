@@ -292,12 +292,40 @@ function ScoreRing({ score }) {
 }
 
 // ─── ScenarioTrack ────────────────────────────────────────────────────────────
-function ScenarioTrack({ stock }) {
+function ScenarioTrack({ stock, compact = false }) {
   const { intrinsic_low, intrinsic_mid, intrinsic_high } = stock.scenario_analysis;
   const price = stock.inputs.price;
   const min = Math.min(intrinsic_low, price) * 0.92;
   const max = Math.max(intrinsic_high, price) * 1.05;
   const toP = (v) => `${((v - min) / (max - min) * 100).toFixed(1)}%`;
+
+  if (compact) {
+    return (
+      <div className="min-w-[200px]">
+        <div className="flex justify-between text-[10px] text-slate-500 mb-0.5">
+          <span>Bear</span><span>Base</span><span>Bull</span>
+        </div>
+        <div className="relative h-4">
+          <div className="absolute top-1.5 left-0 right-0 h-1 rounded-full bg-slate-200" />
+          <div
+            className="absolute top-1.5 h-1 rounded-full"
+            style={{
+              left: toP(intrinsic_low),
+              width: `${((intrinsic_high - intrinsic_low) / (max - min) * 100).toFixed(1)}%`,
+              background: "linear-gradient(90deg,#F43F5E,#3B82F6,#10B981)"
+            }}
+          />
+          <div className="absolute top-0.5 w-0.5 h-3 rounded-full bg-slate-600" style={{ left: toP(price), transform:"translateX(-50%)" }}/>
+        </div>
+        <div className="flex justify-between text-[11px] mt-0.5 font-semibold text-slate-700">
+          <span>{money(intrinsic_low)}</span>
+          <span>{money(intrinsic_mid)}</span>
+          <span>{money(intrinsic_high)}</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-4">
       <div className="flex justify-between text-[11px] text-slate-400 mb-1">
@@ -417,34 +445,14 @@ function TableRow({ stock, onClick, idx }) {
         </div>
       </td>
       <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-700">{pctFmt(stock.quality_metrics.roic)}</span>
-          <div className="w-16 h-1.5 rounded-full bg-slate-100">
-            <div
-              className="h-1.5 rounded-full"
-              style={{
-                width:`${Math.min(stock.quality_metrics.roic*200,100)}%`,
-                background:"linear-gradient(90deg,#38BDF8,#A78BFA,#F472B6)"
-              }}
-            />
-          </div>
-        </div>
-      </td>
-      <td className="px-4 py-3">
         <span
           className="font-bold text-sm"
           style={{ color: stock.score >= 0.75 ? "#0EA5E9" : stock.score >= 0.6 ? "#F59E0B" : "#EF4444" }}>
           {(stock.score * 10).toFixed(1)}
         </span>
       </td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-1 text-xs">
-          <span className="text-rose-500">{money(stock.scenario_analysis.intrinsic_low)}</span>
-          <span className="text-slate-300">·</span>
-          <span className="text-sky-600 font-semibold">{money(stock.scenario_analysis.intrinsic_mid)}</span>
-          <span className="text-slate-300">·</span>
-          <span className="text-emerald-600">{money(stock.scenario_analysis.intrinsic_high)}</span>
-        </div>
+      <td className="px-4 py-3 align-top">
+        <ScenarioTrack stock={stock} compact />
       </td>
     </tr>
   );
@@ -505,6 +513,16 @@ function Modal({ stock, onClose }) {
           ))}
         </div>
 
+        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100 mb-3">
+          <span className="text-xs text-gray-500 w-24 shrink-0">💰 Precio hoy</span>
+          <div className="flex-1 h-2 rounded-full bg-gray-100">
+            <div className="h-2 rounded-full bg-gray-400"
+              style={{ width:`${Math.min((stock.inputs.price/stock.scenario_analysis.intrinsic_high)*100,100)}%` }}/>
+          </div>
+          <span className="text-xs font-bold w-16 text-right text-gray-600">{money(stock.inputs.price)}</span>
+          <span className="text-xs w-14 text-right text-gray-400">—</span>
+        </div>
+
         <p className="text-sm font-semibold text-gray-700 mb-3">Análisis de Escenarios</p>
         {[
           { label:"🐻 Pesimista", value:stock.scenario_analysis.intrinsic_low,  color:"#EF4444" },
@@ -526,15 +544,6 @@ function Modal({ stock, onClose }) {
             </div>
           );
         })}
-        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100 mb-5">
-          <span className="text-xs text-gray-500 w-24 shrink-0">💰 Precio hoy</span>
-          <div className="flex-1 h-2 rounded-full bg-gray-100">
-            <div className="h-2 rounded-full bg-gray-400"
-              style={{ width:`${Math.min((stock.inputs.price/stock.scenario_analysis.intrinsic_high)*100,100)}%` }}/>
-          </div>
-          <span className="text-xs font-bold w-16 text-right text-gray-600">{money(stock.inputs.price)}</span>
-          <span className="text-xs w-14 text-right text-gray-400">—</span>
-        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-blue-50 rounded-xl p-3">
@@ -566,20 +575,16 @@ export default function App() {
   const [isMobile, setIsMobile]           = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
   const [view, setView]                   = useState(() => (typeof window !== "undefined" && window.innerWidth < 768 ? "cards" : "table")); // "cards" | "table"
   const [sortBy, setSortBy]               = useState("score");
+  const [showSortExtras, setShowSortExtras] = useState(false);
   const [filterValuation, setFilterVal]   = useState("All");
   const [filterSector, setFilterSector]   = useState("All");
   const [search, setSearch]               = useState("");
 
   useEffect(() => {
-    const onResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (!mobile && view === "cards") setView("table");
-      if (mobile && view === "table") setView("table"); // keep table first; user can switch
-    };
+    const onResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [view]);
+  }, []);
 
   const sectors = ["All", ...Array.from(new Set(raw.map(d => d.inputs.sector))).sort()];
 
@@ -595,60 +600,44 @@ export default function App() {
       if (sortBy === "score")  return b.score - a.score;
       if (sortBy === "upside") return upside(b) - upside(a);
       if (sortBy === "roic")   return b.quality_metrics.roic - a.quality_metrics.roic;
+      if (sortBy === "fcf")    return b.quality_metrics.fcf_yield - a.quality_metrics.fcf_yield;
       return 0;
     });
 
-  const undervalued = raw.filter(d => upside(d) > 0.05).length;
-  const avgScore    = (raw.reduce((s, d) => s + d.score, 0) / raw.length * 10).toFixed(1);
+  const avgRoic = raw.reduce((s, d) => s + d.quality_metrics.roic, 0) / raw.length;
 
   return (
     <div className="min-h-screen" style={{ background:"#F8FAFC", fontFamily:"'Inter',system-ui,sans-serif" }}>
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
 
-      {/* ── TOP BAR ── */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* ── TOP BAR: título a la izquierda, Resumen Estratégico a la derecha ── */}
+      <div className="bg-white border-b border-slate-200 px-6 py-5">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          {/* Izquierda: Título y subtítulo */}
           <div>
-            <div className="flex items-center gap-2 mb-0.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-blue-600"/>
-              <span className="text-xs font-semibold text-blue-600 tracking-widest uppercase">DCF Valuation</span>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Equity Screener</h1>
+            <h1 className="text-xl font-bold text-slate-800">Stock Valuation Analysis</h1>
+            <p className="text-sm text-slate-500 font-normal mt-1">Analyzing {raw.length} stocks across multiple sectors.</p>
           </div>
-          <div className="flex items-center gap-3">
-            {[
-              { label:"Total",        value:raw.length,        color:"#1D4ED8", bg:"#EFF6FF" },
-              { label:"Subvaloradas", value:undervalued,       color:"#15803D", bg:"#F0FDF4" },
-              { label:"Score Prom.",  value:`${avgScore}/10`,  color:"#7C3AED", bg:"#F5F3FF" },
-            ].map(({ label, value, color, bg }) => (
-              <div key={label} className="rounded-xl px-4 py-2 text-center" style={{ background:bg }}>
-                <p className="text-xs mb-0.5" style={{ color }}>{label}</p>
-                <p className="text-lg font-bold" style={{ color }}>{value}</p>
-              </div>
-            ))}
 
-            {/* ── VIEW TOGGLE ── */}
-            <div className="flex gap-1 rounded-xl p-1 ml-2" style={{ background:"#F1F5F9", border:"1px solid #E2E8F0" }}>
-              <button
-                onClick={() => setView("cards")}
-                disabled={!isMobile}
-                title="Vista tarjetas"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                style={{
-                  background: view==="cards" ? "#1D4ED8" : "transparent",
-                  color: view==="cards" ? "#fff" : "#64748B",
-                  opacity: isMobile ? 1 : 0.4,
-                  cursor: isMobile ? "pointer" : "not-allowed"
-                }}>
-                <IconGrid/> Cards
-              </button>
-              <button
-                onClick={() => setView("table")}
-                title="Vista tabla"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                style={{ background: view==="table" ? "#1D4ED8" : "transparent", color: view==="table" ? "#fff" : "#64748B" }}>
-                <IconTable/> Tabla
-              </button>
+          {/* Derecha: Card Resumen Estratégico */}
+          <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 shrink-0">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="min-w-[100px]">
+                <p className="text-xs font-normal text-slate-500">Total Stocks</p>
+                <p className="text-lg font-bold text-slate-800 mt-0.5">{raw.length}</p>
+              </div>
+              <div className="min-w-[100px]">
+                <p className="text-xs font-normal text-slate-500">MOS Promedio</p>
+                <p className="text-lg font-bold text-slate-800 mt-0.5">{pctFmt(raw.reduce((s, d) => s + d.valuation.margin_of_safety, 0) / raw.length)}</p>
+              </div>
+              <div className="min-w-[100px]">
+                <p className="text-xs font-normal text-slate-500">ROIC Promedio</p>
+                <p className="text-lg font-bold text-slate-800 mt-0.5">{pctFmt(avgRoic)}</p>
+              </div>
+              <div className="min-w-[100px]">
+                <p className="text-xs font-normal text-slate-500">Convicción Prom.</p>
+                <p className="text-lg font-bold text-slate-800 mt-0.5">{(raw.reduce((s, d) => s + d.score, 0) / raw.length * 100).toFixed(0)}%</p>
+              </div>
             </div>
           </div>
         </div>
@@ -664,15 +653,34 @@ export default function App() {
               style={{ border:"1px solid #E5E7EB", width:150 }}/>
           </div>
 
-          <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1" style={{ border:"1px solid #E5E7EB" }}>
+          <div className="relative flex items-center gap-1 bg-gray-50 rounded-lg p-1" style={{ border:"1px solid #E2E7EB" }}>
             <span className="text-xs text-gray-400 px-2">Ordenar:</span>
-            {[{ k:"score",l:"Score" },{ k:"upside",l:"Upside" },{ k:"roic",l:"ROIC" }].map(({ k, l }) => (
+            {[{ k:"score",l:"Score" },{ k:"upside",l:"Upside" }].map(({ k, l }) => (
               <button key={k} onClick={() => setSortBy(k)}
                 className="px-3 py-1 rounded-md text-xs font-semibold transition-all"
                 style={{ background: sortBy===k ? "#1D4ED8" : "transparent", color: sortBy===k ? "#fff" : "#6B7280" }}>
                 {l}
               </button>
             ))}
+
+            <button
+              onClick={() => setShowSortExtras(prev => !prev)}
+              className="px-2 py-1 rounded-md text-xs font-semibold transition-all"
+              style={{ background: showSortExtras ? "#1D4ED8" : "transparent", color: showSortExtras ? "#fff" : "#6B7280" }}>
+              ...
+            </button>
+
+            {showSortExtras && (
+              <div className="absolute top-full mt-1 right-0 w-max bg-white border border-slate-200 rounded-lg shadow-lg p-2 z-20">
+                {[{ k:"roic", l:"ROIC" }, { k:"fcf", l:"FCF Yield" }].map(({ k, l }) => (
+                  <button key={k} onClick={() => { setSortBy(k); setShowSortExtras(false); }}
+                    className="block w-full text-left px-3 py-1 text-xs font-semibold rounded-md hover:bg-blue-50"
+                    style={{ color: sortBy===k ? "#1D4ED8" : "#334155" }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-1 bg-gray-50 rounded-lg p-1" style={{ border:"1px solid #E5E7EB" }}>
@@ -691,12 +699,33 @@ export default function App() {
             {sectors.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
 
-          <span className="text-xs text-gray-400 ml-auto">{data.length} resultados</span>
+          <div className="ml-auto flex items-center gap-3">
+            <span className="text-xs text-gray-400">{data.length} resultados</span>
+            <div className="flex gap-1 rounded-lg p-1 w-fit bg-slate-100 border border-slate-200">
+              <button
+                onClick={() => setView("cards")}
+                title="Vista tarjetas"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all"
+                style={{
+                  background: view === "cards" ? "#374151" : "transparent",
+                  color: view === "cards" ? "#fff" : "#64748B"
+                }}>
+                <IconGrid /> Cards
+              </button>
+              <button
+                onClick={() => setView("table")}
+                title="Vista tabla"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all"
+                style={{ background: view === "table" ? "#374151" : "transparent", color: view === "table" ? "#fff" : "#64748B" }}>
+                <IconTable /> Tabla
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* ── CONTENT ── */}
-      {view === "cards" && isMobile ? (
+      {view === "cards" ? (
         <>
           <div className="max-w-7xl mx-auto px-6 pt-4 pb-2 flex items-center gap-5 text-xs text-gray-400">
             <span className="flex items-center gap-1.5"><span className="inline-block w-0.5 h-4 bg-gray-700 rounded"/>Precio actual</span>
@@ -714,7 +743,7 @@ export default function App() {
           <table className="w-full">
             <thead>
               <tr>
-                {["Ticker","Sector","Precio","Intrínseco","Upside","ROIC","Score","Escenarios"].map(h => (
+                {["Ticker","Sector","Precio","Intrínseco","Upside","Score","Escenarios"].map(h => (
                   <th
                     key={h}
                     className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide"
