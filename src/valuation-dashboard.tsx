@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import outputText from "../output.txt?raw";
 import { MOCK_ANALYSIS } from "./mockData";
@@ -26,6 +26,165 @@ const IconGrid     = () => <svg width="15" height="15" fill="none" stroke="curre
 const IconTable    = () => <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>;
 const IconAnalyze  = () => <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>;
 const IconSpinner  = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{animation:"spin 1s linear infinite"}}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>;
+
+// ─── Scenario Asymmetry Chart ─────────────────────────────────────────────────────
+function ScenarioAsymmetryChart({ data }) {
+  const [hoveredStock, setHoveredStock] = useState(null);
+  const containerRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
+  
+  // Calculate asymmetry data
+  const chartData = data.map(stock => {
+    const bullDistance = stock.scenario_analysis.intrinsic_high - stock.inputs.price;
+    const bearDistance = stock.scenario_analysis.intrinsic_low - stock.inputs.price;
+    
+    return {
+      ticker: stock.ticker,
+      bullUpside: bullDistance,
+      bearDownside: bearDistance,
+    };
+  });
+
+  const maxDistance = Math.max(
+    ...chartData.map(d => Math.abs(d.bullUpside)),
+    ...chartData.map(d => Math.abs(d.bearDownside))
+  );
+  
+  const chartHeight = 280;
+  const barWidth = Math.max(30, Math.min(50, (containerWidth - 64) / chartData.length - 8));
+  const gap = 8;
+  
+  return (
+    <div className="bg-white rounded-2xl p-4 md:p-6 mt-6" style={{ border:"1px solid #E5E7EB" }}>
+      <div className="mb-4">
+        <h3 className="text-lg font-bold text-gray-900">Asimetría de Escenarios</h3>
+        <p className="text-sm text-gray-500 mt-1">Perfil de riesgo/recompensa: Distancia desde precio actual</p>
+      </div>
+      
+      <div ref={containerRef} className="relative" style={{ height: `${chartHeight}px`, width: "100%" }}>
+        {/* Y-axis */}
+        <div className="absolute left-0 top-0 bottom-8 w-10 flex flex-col justify-between text-xs text-gray-500">
+          <span>+${maxDistance.toFixed(0)}</span>
+          <span>$0</span>
+          <span>-${maxDistance.toFixed(0)}</span>
+        </div>
+        
+        {/* Chart area */}
+        <div className="ml-12 relative" style={{ height: "calc(100% - 32px)", width: "calc(100% - 48px)" }}>
+          {/* Zero line - subtle like grid */}
+          <div className="absolute left-0 right-0 border-t border-gray-300" style={{ top: "50%" }} />
+          
+          {/* Grid lines */}
+          <div className="absolute left-0 right-0 border-t border-gray-100" style={{ top: "25%" }} />
+          <div className="absolute left-0 right-0 border-t border-gray-100" style={{ top: "75%" }} />
+          
+          {/* Bars container */}
+          <div className="absolute inset-0 flex items-end justify-around" style={{ padding: `0 ${gap/2}px` }}>
+            {chartData.map((item) => {
+              const bullHeight = (item.bullUpside / maxDistance) * 50;
+              const bearHeight = (Math.abs(item.bearDownside) / maxDistance) * 50;
+              const isHovered = hoveredStock === item.ticker;
+              
+              return (
+                <div
+                  key={item.ticker}
+                  className="relative flex flex-col items-center cursor-pointer"
+                  style={{ 
+                    width: `${barWidth}px`,
+                    height: "100%"
+                  }}
+                  onMouseEnter={() => setHoveredStock(item.ticker)}
+                  onMouseLeave={() => setHoveredStock(null)}
+                >
+                  {/* Bull Upside Bar (top half) */}
+                  <div className="relative w-full flex-1 flex items-end justify-center">
+                    <div
+                      className="w-full transition-all duration-200"
+                      style={{
+                        height: `${bullHeight}%`,
+                        backgroundColor: "#10B981",
+                        opacity: isHovered ? 0.8 : 1,
+                        borderRadius: "2px 2px 0 0",
+                        minHeight: bullHeight > 0 ? "2px" : "0"
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Zero line - yellow indicator */}
+                  <div className="w-full h-px bg-yellow-400" />
+                  
+                  {/* Bear Downside Bar (bottom half) */}
+                  <div className="relative w-full flex-1 flex items-start justify-center">
+                    <div
+                      className="w-full transition-all duration-200"
+                      style={{
+                        height: `${bearHeight}%`,
+                        backgroundColor: "#EF4444",
+                        opacity: isHovered ? 0.8 : 1,
+                        borderRadius: "0 0 2px 2px",
+                        minHeight: bearHeight > 0 ? "2px" : "0"
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Tooltip */}
+                  {isHovered && (
+                    <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-gray-900 text-white p-2 rounded-lg shadow-lg z-20 whitespace-nowrap">
+                      <div className="font-bold text-xs mb-1">{item.ticker}</div>
+                      <div className="text-xs space-y-0.5">
+                        <div className="text-green-400">Bull: +${item.bullUpside.toFixed(2)}</div>
+                        <div className="text-red-400">Bear: ${item.bearDownside.toFixed(2)}</div>
+                      </div>
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full">
+                        <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        
+        {/* X-axis labels */}
+        <div className="absolute bottom-0 left-12 right-0 h-6 flex items-end justify-around" style={{ padding: `0 ${gap/2}px` }}>
+          {chartData.map((item) => (
+            <div
+              key={`label-${item.ticker}`}
+              className="text-xs text-gray-600 font-medium text-center truncate"
+              style={{ width: `${barWidth}px` }}
+            >
+              {item.ticker}
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Legend */}
+      <div className="flex justify-center items-center gap-6 mt-4">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 bg-green-500 rounded"></div>
+          <span className="text-xs text-gray-600">Bull Upside</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 bg-red-500 rounded"></div>
+          <span className="text-xs text-gray-600">Bear Downside</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── PDF generator (builds HTML → opens in new tab → user prints/saves) ───────
 function openAnalysisPDF(data) {
@@ -444,6 +603,9 @@ function TableRow({ stock, onClick, idx }) {
           </span>
         </div>
       </td>
+      <td className="px-4 py-3 font-semibold text-slate-700">
+        {pctFmt(stock.quality_metrics.fcf_yield)}
+      </td>
       <td className="px-4 py-3">
         <span
           className="font-bold text-sm"
@@ -724,6 +886,11 @@ export default function App() {
         </div>
       </div>
 
+      {/* ── SCENARIO ASYMMETRY CHART ── */}
+      <div className="max-w-7xl mx-auto px-6 py-4">
+        <ScenarioAsymmetryChart data={data} />
+      </div>
+
       {/* ── CONTENT ── */}
       {view === "cards" ? (
         <>
@@ -743,7 +910,7 @@ export default function App() {
           <table className="w-full">
             <thead>
               <tr>
-                {["Ticker","Sector","Precio","Intrínseco","Upside","Score","Escenarios"].map(h => (
+                {["Ticker","Sector","Precio","Intrínseco","Upside","FCF Yield","Score","Escenarios"].map(h => (
                   <th
                     key={h}
                     className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide"
@@ -761,7 +928,393 @@ export default function App() {
         </div>
       )}
 
+      {/* ── CONTEXTUAL INTELLIGENCE FLAGS ── */}
+      <ContextualFlags data={data} />
+
+      {/* ── STRATEGIC MAP ── */}
+      <StrategicMap data={data} />
+
       <Modal stock={selected} onClose={() => setSelected(null)}/>
+    </div>
+  );
+}
+
+// ─── Strategic Map Component ─────────────────────────────────────────────────────
+function StrategicMap({ data }) {
+  const [hoveredStock, setHoveredStock] = useState(null);
+  const containerRef = useRef(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setDimensions({ width: rect.width, height: rect.height });
+      }
+    };
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
+  
+  // Calculate metrics for each stock
+  const mapData = data.map(stock => ({
+    ticker: stock.ticker,
+    mos: (stock.valuation.margin_of_safety * 100),
+    roic: (stock.quality_metrics.roic * 100),
+    score: stock.score,
+    // Categorize stocks
+    category: categorizeStock(stock)
+  }));
+  
+  function categorizeStock(stock) {
+    const mos = stock.valuation.margin_of_safety;
+    const roic = stock.quality_metrics.roic;
+    
+    if (mos > 0.3 && roic > 0.20) return 'core-buy';
+    if (mos > 0.50) return 'valor-defensivo';
+    if (roic > 0.25) return 'calidad-cara';
+    return 'neutral';
+  }
+  
+  const categoryColors = {
+    'core-buy': '#10B981',
+    'valor-defensivo': '#0EA5E9',
+    'calidad-cara': '#F87171',
+    'neutral': '#94A3B8'
+  };
+  
+  // Chart dimensions
+  const chartWidth = dimensions.width || 800;
+  const chartHeight = 500;
+  const padding = { top: 60, right: 80, bottom: 60, left: 80 };
+  const plotWidth = chartWidth - padding.left - padding.right;
+  const plotHeight = chartHeight - padding.top - padding.bottom;
+  
+  // Scales
+  const xMin = -75, xMax = 225;
+  const yMin = -5, yMax = 65;
+  
+  const xScale = (val) => padding.left + ((val - xMin) / (xMax - xMin)) * plotWidth;
+  const yScale = (val) => padding.top + plotHeight - ((val - yMin) / (yMax - yMin)) * plotHeight;
+  
+  // Quadrant lines
+  const xCenter = xScale(75);
+  const yCenter = yScale(22.5);
+  
+  return (
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="bg-slate-900 rounded-2xl p-6 md:p-8" style={{ border: "1px solid #334155" }}>
+        {/* Header */}
+        <div className="mb-6">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
+            Vista de Pajaro - El Radar Finsano
+          </p>
+          <h2 className="text-xl md:text-2xl font-bold text-white">
+            Mapa Estrategico de Asignacion — <span className="text-cyan-400">Calidad</span> vs. <span className="text-cyan-400">Valor</span>
+          </h2>
+        </div>
+        
+        {/* Legend */}
+        <div className="flex flex-wrap items-center gap-6 mb-6 text-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <span className="text-slate-300">Core Buy</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-sky-500"></div>
+            <span className="text-slate-300">Valor Defensivo</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-red-400"></div>
+            <span className="text-slate-300">Calidad Cara</span>
+          </div>
+          <div className="ml-auto text-xs text-slate-500">
+            Tamaño del punto = Conviccion del modelo
+          </div>
+        </div>
+        
+        {/* Chart */}
+        <div ref={containerRef} className="relative" style={{ height: `${chartHeight}px` }}>
+          <svg width={chartWidth} height={chartHeight} className="absolute inset-0">
+            {/* Grid lines */}
+            {[0, 15, 30, 45, 60].map(y => (
+              <line key={`y-${y}`} x1={padding.left} y1={yScale(y)} x2={chartWidth - padding.right} y2={yScale(y)} stroke="#334155" strokeDasharray="4,4" strokeWidth="1" />
+            ))}
+            {[-75, 0, 75, 150, 225].map(x => (
+              <line key={`x-${x}`} x1={xScale(x)} y1={padding.top} x2={xScale(x)} y2={chartHeight - padding.bottom} stroke="#334155" strokeDasharray="4,4" strokeWidth="1" />
+            ))}
+            
+            {/* Center lines (darker) */}
+            <line x1={xCenter} y1={padding.top} x2={xCenter} y2={chartHeight - padding.bottom} stroke="#475569" strokeWidth="2" strokeDasharray="5,5" />
+            <line x1={padding.left} y1={yCenter} x2={chartWidth - padding.right} y2={yCenter} stroke="#475569" strokeWidth="2" strokeDasharray="5,5" />
+            
+            {/* Axes labels */}
+            <text x={chartWidth / 2} y={chartHeight - 15} textAnchor="middle" fill="#94A3B8" fontSize="12">VALOR (MOS %)</text>
+            <text x={20} y={chartHeight / 2} textAnchor="middle" fill="#94A3B8" fontSize="12" transform={`rotate(-90, 20, ${chartHeight / 2})`}>CALIDAD (ROIC %)</text>
+            
+            {/* X-axis labels */}
+            {[-75, 0, 75, 150, 225].map(x => (
+              <text key={`xlabel-${x}`} x={xScale(x)} y={chartHeight - padding.bottom + 20} textAnchor="middle" fill="#64748B" fontSize="11">{x}%</text>
+            ))}
+            
+            {/* Y-axis labels */}
+            {[0, 15, 30, 45, 60].map(y => (
+              <text key={`ylabel-${y}`} x={padding.left - 10} y={yScale(y) + 4} textAnchor="end" fill="#64748B" fontSize="11">{y}%</text>
+            ))}
+            
+            {/* Quadrant labels */}
+            <text x={xScale(37.5)} y={yScale(55)} textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="500">ESPERAR RETROCESO</text>
+            <text x={xScale(150)} y={yScale(55)} textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="500">COMPRA CORE</text>
+            <text x={xScale(37.5)} y={yScale(5)} textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="500">Trampas de Valor?</text>
+            <text x={xScale(150)} y={yScale(5)} textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="500">VALOR DEFENSIVO</text>
+            
+            {/* Data points */}
+            {mapData.map((point) => {
+              const isHovered = hoveredStock === point.ticker;
+              const x = xScale(point.mos);
+              const y = yScale(point.roic);
+              const radius = 6 + (point.score * 8); // Size based on conviction
+              
+              // Gradient ID for this point
+              const gradientId = `gradient-${point.ticker}`;
+              
+              return (
+                <g key={point.ticker}>
+                  {/* Gradient definition */}
+                  <defs>
+                    <radialGradient id={gradientId} cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stopColor={categoryColors[point.category]} stopOpacity="1" />
+                      <stop offset="70%" stopColor={categoryColors[point.category]} stopOpacity="0.8" />
+                      <stop offset="100%" stopColor={categoryColors[point.category]} stopOpacity="0.4" />
+                    </radialGradient>
+                  </defs>
+                  
+                  {/* Outer glow */}
+                  <circle 
+                    cx={x} 
+                    cy={y} 
+                    r={radius + 3} 
+                    fill={`url(#${gradientId})`} 
+                    opacity="0.6"
+                    className="pointer-events-none"
+                  />
+                  
+                  {/* Glow effect for hovered */}
+                  {isHovered && (
+                    <circle cx={x} cy={y} r={radius + 6} fill={categoryColors[point.category]} opacity="0.3" />
+                  )}
+                  
+                  {/* Main point with solid center */}
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r={radius}
+                    fill={categoryColors[point.category]}
+                    stroke="#0F172A"
+                    strokeWidth="1.5"
+                    className="cursor-pointer transition-all"
+                    onMouseEnter={() => setHoveredStock(point.ticker)}
+                    onMouseLeave={() => setHoveredStock(null)}
+                  />
+                  
+                  {/* Inner highlight */}
+                  <circle
+                    cx={x - radius * 0.2}
+                    cy={y - radius * 0.2}
+                    r={radius * 0.3}
+                    fill="white"
+                    opacity="0.3"
+                    className="pointer-events-none"
+                  />
+                  {/* Label */}
+                  <text
+                    x={x}
+                    y={y - radius - 5}
+                    textAnchor="middle"
+                    fill="white"
+                    fontSize="10"
+                    fontWeight="bold"
+                    className="pointer-events-none"
+                  >
+                    {point.ticker}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+          
+          {/* Tooltip */}
+          {hoveredStock && (() => {
+            const point = mapData.find(p => p.ticker === hoveredStock);
+            if (!point) return null;
+            
+            const x = xScale(point.mos);
+            const y = yScale(point.roic);
+            
+            return (
+              <div
+                className="absolute bg-slate-800 text-white p-3 rounded-lg shadow-xl border border-slate-600 z-20 pointer-events-none"
+                style={{
+                  left: `${x + 15}px`,
+                  top: `${y - 15}px`,
+                  transform: x > chartWidth / 2 ? 'translateX(-100%) translateX(-20px)' : 'translateX(0)'
+                }}
+              >
+                <div className="font-bold text-sm mb-1">{point.ticker}</div>
+                <div className="text-xs space-y-1 text-slate-300">
+                  <div>MOS: {point.mos.toFixed(1)}%</div>
+                  <div>ROIC: {point.roic.toFixed(1)}%</div>
+                  <div>Score: {(point.score * 10).toFixed(1)}/10</div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Contextual Flags Component ──────────────────────────────────────────────
+function ContextualFlags({ data }) {
+  // Helper to get tickers matching criteria
+  const getTickers = (criteria) => data.filter(criteria).map(d => d.ticker);
+  
+  // Define all flags with their logic
+  const flags = [
+    {
+      id: "quality-yielders",
+      icon: "💎",
+      title: "Quality Yielders",
+      status: "ON",
+      statusColor: "#10B981",
+      bgColor: "#F0FDF4",
+      borderColor: "#86EFAC",
+      description: "Cluster de calidad (ROIC > 15%) con FCF Yield > 5%. Valor tangible, no especulativo.",
+      tickers: getTickers(d => d.quality_metrics.roic > 0.15 && d.quality_metrics.fcf_yield > 0.05)
+    },
+    {
+      id: "fcf-normalization",
+      icon: "⚡",
+      title: "FCF Normalization",
+      status: "ACTIVE",
+      statusColor: "#F59E0B",
+      bgColor: "#FFFBEB",
+      borderColor: "#FCD34D",
+      description: "El modelo castigo los picos de crecimiento. No somos ingenuos con outliers de FCF.",
+      tickers: getTickers(d => d.assumptions.growth_regime === "HYPER_GROWTH")
+    },
+    {
+      id: "debt-fcf",
+      icon: "🛡️",
+      title: "Debt vs. FCF",
+      status: "SAFE",
+      statusColor: "#0EA5E9",
+      bgColor: "#F0F9FF",
+      borderColor: "#7DD3FC",
+      description: "Empresas con deuda manejable y flujo de caja suficiente. Sin alarmas de solvencia.",
+      tickers: getTickers(d => d.quality_metrics.debt_to_fcf < 3)
+    },
+    {
+      id: "hyper-growth",
+      icon: "🚀",
+      title: "Hyper Growth",
+      status: "HYPER",
+      statusColor: "#8B5CF6",
+      bgColor: "#F5F3FF",
+      borderColor: "#C4B5FD",
+      description: "Regimen de crecimiento acelerado detectado. Mas potencial, mayor incertidumbre.",
+      tickers: getTickers(d => d.assumptions.growth_regime === "HYPER_GROWTH")
+    },
+    {
+      id: "sector-capped",
+      icon: "⚠️",
+      title: "Sector Capped",
+      status: "WATCH",
+      statusColor: "#EF4444",
+      bgColor: "#FEF2F2",
+      borderColor: "#FCA5A5",
+      description: "Crecimiento historico capado por el sector. Upside limitado por restricciones macro.",
+      tickers: getTickers(d => ["Consumer Defensive", "Utilities"].includes(d.inputs.sector))
+    },
+    {
+      id: "fcf-stability",
+      icon: "📊",
+      title: "FCF Stability",
+      status: "STABLE",
+      statusColor: "#06B6D4",
+      bgColor: "#ECFEFF",
+      borderColor: "#67E8F9",
+      description: "Alta estabilidad de flujo libre de caja. Predecibilidad alta, ideal como ancla de portfolio.",
+      tickers: getTickers(d => d.data_quality?.confidence_score > 0.8 || d.score > 0.7)
+    }
+  ];
+
+  return (
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="mb-6">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Inteligencia Contextual</p>
+        <h2 className="text-xl font-bold text-gray-900">Flags de Segundo Orden</h2>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {flags.map((flag) => (
+          <div
+            key={flag.id}
+            className="rounded-xl p-5 transition-all duration-200 hover:shadow-md"
+            style={{
+              background: flag.bgColor,
+              borderLeft: `4px solid ${flag.borderColor}`,
+              border: `1px solid ${flag.borderColor}`
+            }}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">{flag.icon}</span>
+                <h3 className="font-bold text-gray-900">{flag.title}</h3>
+              </div>
+              <span
+                className="text-xs font-bold px-2 py-1 rounded-full"
+                style={{
+                  backgroundColor: flag.statusColor,
+                  color: "#fff"
+                }}
+              >
+                {flag.status}
+              </span>
+            </div>
+            
+            {/* Description */}
+            <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+              {flag.description}
+            </p>
+            
+            {/* Tickers */}
+            {flag.tickers.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {flag.tickers.slice(0, 6).map(ticker => (
+                  <span
+                    key={ticker}
+                    className="text-xs font-medium px-2 py-1 rounded-md"
+                    style={{
+                      backgroundColor: "rgba(255,255,255,0.6)",
+                      color: "#374151",
+                      border: "1px solid rgba(0,0,0,0.1)"
+                    }}
+                  >
+                    {ticker}
+                  </span>
+                ))}
+                {flag.tickers.length > 6 && (
+                  <span className="text-xs text-gray-500 px-1 py-1">+{flag.tickers.length - 6}</span>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
