@@ -1,7 +1,10 @@
 // @ts-nocheck
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-import { raw, MOCK_ANALYSIS } from "./mockData";
+import outputText from "../output.txt?raw";
+import { MOCK_ANALYSIS } from "./mockData";
+
+const raw = JSON.parse(outputText);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const pctFmt = (n) => `${(n * 100).toFixed(1)}%`;
@@ -265,15 +268,23 @@ async function fetchAnalysis(ticker) {
 
 // ─── ScoreRing ────────────────────────────────────────────────────────────────
 function ScoreRing({ score }) {
-  const r = 20, circ = 2 * Math.PI * r;
-  const color = score >= 0.75 ? "#1D4ED8" : score >= 0.6 ? "#F59E0B" : "#EF4444";
+  const r = 19, circ = 2 * Math.PI * r;
+  const color = score >= 0.75 ? "#0EA5E9" : score >= 0.6 ? "#F59E0B" : "#EF4444";
   return (
-    <svg width="52" height="52" viewBox="0 0 52 52">
-      <circle cx="26" cy="26" r={r} fill="none" stroke="#E5E7EB" strokeWidth="4"/>
-      <circle cx="26" cy="26" r={r} fill="none" stroke={color} strokeWidth="4"
-        strokeDasharray={`${score * circ} ${circ}`} strokeLinecap="round"
-        transform="rotate(-90 26 26)"/>
-      <text x="26" y="30" textAnchor="middle" fontSize="11" fontWeight="700" fill={color}>
+    <svg width="48" height="48" viewBox="0 0 48 48">
+      <circle cx="24" cy="24" r={r} fill="none" stroke="#E2E8F0" strokeWidth="4"/>
+      <circle
+        cx="24"
+        cy="24"
+        r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth="4.5"
+        strokeDasharray={`${Math.min(score,1) * circ} ${circ}`}
+        strokeLinecap="round"
+        transform="rotate(-90 24 24)"
+      />
+      <text x="24" y="29" textAnchor="middle" fontSize="11" fontWeight="700" fill={color}>
         {(score * 10).toFixed(1)}
       </text>
     </svg>
@@ -288,23 +299,29 @@ function ScenarioTrack({ stock }) {
   const max = Math.max(intrinsic_high, price) * 1.05;
   const toP = (v) => `${((v - min) / (max - min) * 100).toFixed(1)}%`;
   return (
-    <div className="mt-3">
-      <div className="flex justify-between text-xs text-gray-400 mb-1">
+    <div className="mt-4">
+      <div className="flex justify-between text-[11px] text-slate-400 mb-1">
         <span>Escenarios</span><span>Bear · Base · Bull</span>
       </div>
-      <div className="relative h-5">
-        <div className="absolute top-2 left-0 right-0 h-1.5 rounded-full bg-gray-100"/>
-        <div className="absolute top-2 h-1.5 rounded-full bg-blue-50 border border-blue-100"
-          style={{ left: toP(intrinsic_low), width: `${((intrinsic_high - intrinsic_low) / (max - min) * 100).toFixed(1)}%` }}/>
-        <div className="absolute top-1 w-1 h-3 rounded-sm bg-red-400"   style={{ left: toP(intrinsic_low),  transform:"translateX(-50%)" }}/>
-        <div className="absolute top-1 w-1 h-3 rounded-sm bg-blue-500"  style={{ left: toP(intrinsic_mid),  transform:"translateX(-50%)" }}/>
-        <div className="absolute top-1 w-1 h-3 rounded-sm bg-green-500" style={{ left: toP(intrinsic_high), transform:"translateX(-50%)" }}/>
-        <div className="absolute top-0 h-5 w-0.5 bg-gray-700 rounded-full" style={{ left: toP(price), transform:"translateX(-50%)" }}/>
+      <div className="relative h-6">
+        <div className="absolute top-3 left-0 right-0 h-1.5 rounded-full bg-slate-100" />
+        <div
+          className="absolute top-3 h-1.5 rounded-full border border-sky-100"
+          style={{
+            left: toP(intrinsic_low),
+            width: `${((intrinsic_high - intrinsic_low) / (max - min) * 100).toFixed(1)}%`,
+            background: "linear-gradient(90deg,#F43F5E,#3B82F6,#10B981)"
+          }}
+        />
+        <div className="absolute top-1.5 w-1 h-4 rounded-sm bg-rose-500"  style={{ left: toP(intrinsic_low),  transform:"translateX(-50%)" }}/>
+        <div className="absolute top-1.5 w-1 h-4 rounded-sm bg-sky-500"   style={{ left: toP(intrinsic_mid),  transform:"translateX(-50%)" }}/>
+        <div className="absolute top-1.5 w-1 h-4 rounded-sm bg-emerald-500"style={{ left: toP(intrinsic_high), transform:"translateX(-50%)" }}/>
+        <div className="absolute top-1 w-0.5 h-5 rounded-full bg-slate-700" style={{ left: toP(price), transform:"translateX(-50%)" }}/>
       </div>
-      <div className="flex justify-between text-xs mt-1">
-        <span className="text-red-500">{money(intrinsic_low)}</span>
-        <span className="text-blue-600 font-semibold">{money(intrinsic_mid)}</span>
-        <span className="text-green-600">{money(intrinsic_high)}</span>
+      <div className="flex justify-between text-[12px] mt-1 font-semibold">
+        <span className="text-rose-500">{money(intrinsic_low)}</span>
+        <span className="text-sky-600">{money(intrinsic_mid)}</span>
+        <span className="text-emerald-600">{money(intrinsic_high)}</span>
       </div>
     </div>
   );
@@ -318,45 +335,48 @@ function Card({ stock, onClick }) {
     <div onClick={() => onClick(stock)}
       className="bg-white rounded-2xl p-5 cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
       style={{ border:"1px solid #E5E7EB" }}>
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-xl font-bold text-gray-900">{stock.ticker}</span>
+      <div className="flex justify-between items-start">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-bold text-slate-900">{stock.ticker}</span>
             {stock.assumptions.growth_regime === "HYPER_GROWTH" && (
-              <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 border border-amber-200">HG</span>
+              <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 border border-amber-200">HG</span>
             )}
           </div>
           <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background:tag.bg, color:tag.text }}>{stock.inputs.sector}</span>
         </div>
         <ScoreRing score={stock.score}/>
       </div>
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="bg-gray-50 rounded-xl p-3">
-          <p className="text-xs text-gray-400 mb-0.5">Precio</p>
-          <p className="text-sm font-bold text-gray-800">{money(stock.inputs.price)}</p>
+
+      <div className="grid grid-cols-2 gap-3 mt-4">
+        <div className="rounded-xl p-3 border border-slate-100 bg-slate-50">
+          <p className="text-xs text-slate-400 mb-1">Precio</p>
+          <p className="text-base font-semibold text-slate-900">{money(stock.inputs.price)}</p>
         </div>
-        <div className="rounded-xl p-3" style={{ background: up > 0 ? "#EFF6FF" : "#FFF1F2" }}>
-          <p className="text-xs mb-0.5" style={{ color: up > 0 ? "#93C5FD" : "#FCA5A5" }}>Valor intrínseco</p>
-          <p className="text-sm font-bold" style={{ color: up > 0 ? "#1D4ED8" : "#DC2626" }}>
+        <div className="rounded-xl p-3 border border-sky-100" style={{ background: up > 0 ? "#F0F9FF" : "#FFF1F2" }}>
+          <p className="text-xs mb-1" style={{ color: up > 0 ? "#0EA5E9" : "#EF4444" }}>Valor intrínseco</p>
+          <p className="text-base font-semibold" style={{ color: up > 0 ? "#0F172A" : "#B91C1C" }}>
             {money(stock.valuation.intrinsic_value_per_share)}
           </p>
         </div>
       </div>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-1.5">
-          <span className="text-base">{up > 0 ? "▲" : "▼"}</span>
-          <span className="text-sm font-semibold" style={{ color: up > 0 ? "#15803D" : "#DC2626" }}>
+
+      <div className="flex items-center justify-between mt-4 mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-lg" style={{ color: up > 0 ? "#10B981" : "#EF4444" }}>{up > 0 ? "▲" : "▼"}</span>
+          <span className="text-sm font-semibold" style={{ color: up > 0 ? "#0F9F6E" : "#B91C1C" }}>
             {up > 0 ? "+" : ""}{(up * 100).toFixed(1)}% upside
           </span>
         </div>
-        <div>
-          <span className="text-xs text-gray-400">ROIC </span>
-          <span className="text-xs font-semibold text-gray-700">{pctFmt(stock.quality_metrics.roic)}</span>
+        <div className="text-xs text-slate-500">
+          ROIC <span className="font-semibold text-slate-700">{pctFmt(stock.quality_metrics.roic)}</span>
         </div>
       </div>
-      <div className="h-1.5 rounded-full bg-gray-100 mb-3">
+
+      <div className="h-1.5 rounded-full bg-slate-100 mb-3">
         <div className="h-1.5 rounded-full" style={{ width:`${Math.min(stock.quality_metrics.roic*200,100)}%`, background:"linear-gradient(90deg,#F472B6,#A78BFA,#38BDF8)" }}/>
       </div>
+
       <ScenarioTrack stock={stock}/>
     </div>
   );
@@ -367,48 +387,63 @@ function TableRow({ stock, onClick, idx }) {
   const up  = upside(stock);
   const tag = SECTOR_TAGS[stock.inputs.sector] || { bg:"#F3F4F6", text:"#374151" };
   return (
-    <tr onClick={() => onClick(stock)} className="cursor-pointer transition-colors hover:bg-blue-50"
-      style={{ background: idx % 2 === 0 ? "#fff" : "#F9FAFB", borderBottom:"1px solid #E5E7EB" }}>
+    <tr
+      onClick={() => onClick(stock)}
+      className="cursor-pointer transition-colors hover:bg-sky-50"
+      style={{ background: idx % 2 === 0 ? "#fff" : "#F8FAFC", borderBottom:"1px solid #E2E8F0" }}>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-gray-900">{stock.ticker}</span>
+          <span className="font-bold text-slate-900">{stock.ticker}</span>
           {stock.assumptions.growth_regime === "HYPER_GROWTH" && (
-            <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 border border-amber-200">HG</span>
+            <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 border border-amber-200">HG</span>
           )}
         </div>
       </td>
       <td className="px-4 py-3">
-        <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background:tag.bg, color:tag.text }}>{stock.inputs.sector}</span>
+        <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background:tag.bg, color:tag.text }}>
+          {stock.inputs.sector}
+        </span>
       </td>
-      <td className="px-4 py-3 font-semibold text-gray-800">{money(stock.inputs.price)}</td>
-      <td className="px-4 py-3 font-semibold" style={{ color: up > 0 ? "#1D4ED8" : "#DC2626" }}>
+      <td className="px-4 py-3 font-semibold text-slate-800">{money(stock.inputs.price)}</td>
+      <td className="px-4 py-3 font-semibold" style={{ color: up > 0 ? "#0EA5E9" : "#DC2626" }}>
         {money(stock.valuation.intrinsic_value_per_share)}
       </td>
       <td className="px-4 py-3">
-        <span className="font-semibold text-sm" style={{ color: up > 0 ? "#15803D" : "#DC2626" }}>
-          {up > 0 ? "+" : ""}{(up * 100).toFixed(1)}%
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-slate-400">Δ</span>
+          <span className="font-semibold text-sm" style={{ color: up > 0 ? "#0F9F6E" : "#B91C1C" }}>
+            {up > 0 ? "+" : ""}{(up * 100).toFixed(1)}%
+          </span>
+        </div>
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-700">{pctFmt(stock.quality_metrics.roic)}</span>
-          <div className="w-16 h-1.5 rounded-full bg-gray-100">
-            <div className="h-1.5 rounded-full" style={{ width:`${Math.min(stock.quality_metrics.roic*200,100)}%`, background:"linear-gradient(90deg,#F472B6,#A78BFA,#38BDF8)" }}/>
+          <span className="text-sm text-slate-700">{pctFmt(stock.quality_metrics.roic)}</span>
+          <div className="w-16 h-1.5 rounded-full bg-slate-100">
+            <div
+              className="h-1.5 rounded-full"
+              style={{
+                width:`${Math.min(stock.quality_metrics.roic*200,100)}%`,
+                background:"linear-gradient(90deg,#38BDF8,#A78BFA,#F472B6)"
+              }}
+            />
           </div>
         </div>
       </td>
       <td className="px-4 py-3">
-        <span className="font-bold text-sm" style={{ color: stock.score >= 0.75 ? "#1D4ED8" : stock.score >= 0.6 ? "#F59E0B" : "#EF4444" }}>
+        <span
+          className="font-bold text-sm"
+          style={{ color: stock.score >= 0.75 ? "#0EA5E9" : stock.score >= 0.6 ? "#F59E0B" : "#EF4444" }}>
           {(stock.score * 10).toFixed(1)}
         </span>
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1 text-xs">
-          <span className="text-red-500">{money(stock.scenario_analysis.intrinsic_low)}</span>
-          <span className="text-gray-300">·</span>
-          <span className="text-blue-600 font-semibold">{money(stock.scenario_analysis.intrinsic_mid)}</span>
-          <span className="text-gray-300">·</span>
-          <span className="text-green-600">{money(stock.scenario_analysis.intrinsic_high)}</span>
+          <span className="text-rose-500">{money(stock.scenario_analysis.intrinsic_low)}</span>
+          <span className="text-slate-300">·</span>
+          <span className="text-sky-600 font-semibold">{money(stock.scenario_analysis.intrinsic_mid)}</span>
+          <span className="text-slate-300">·</span>
+          <span className="text-emerald-600">{money(stock.scenario_analysis.intrinsic_high)}</span>
         </div>
       </td>
     </tr>
@@ -528,11 +563,23 @@ function Modal({ stock, onClose }) {
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const [selected, setSelected]           = useState(null);
-  const [view, setView]                   = useState("cards"); // "cards" | "table"
+  const [isMobile, setIsMobile]           = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  const [view, setView]                   = useState(() => (typeof window !== "undefined" && window.innerWidth < 768 ? "cards" : "table")); // "cards" | "table"
   const [sortBy, setSortBy]               = useState("score");
   const [filterValuation, setFilterVal]   = useState("All");
   const [filterSector, setFilterSector]   = useState("All");
   const [search, setSearch]               = useState("");
+
+  useEffect(() => {
+    const onResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile && view === "cards") setView("table");
+      if (mobile && view === "table") setView("table"); // keep table first; user can switch
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [view]);
 
   const sectors = ["All", ...Array.from(new Set(raw.map(d => d.inputs.sector))).sort()];
 
@@ -584,9 +631,15 @@ export default function App() {
             <div className="flex gap-1 rounded-xl p-1 ml-2" style={{ background:"#F1F5F9", border:"1px solid #E2E8F0" }}>
               <button
                 onClick={() => setView("cards")}
+                disabled={!isMobile}
                 title="Vista tarjetas"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                style={{ background: view==="cards" ? "#1D4ED8" : "transparent", color: view==="cards" ? "#fff" : "#64748B" }}>
+                style={{
+                  background: view==="cards" ? "#1D4ED8" : "transparent",
+                  color: view==="cards" ? "#fff" : "#64748B",
+                  opacity: isMobile ? 1 : 0.4,
+                  cursor: isMobile ? "pointer" : "not-allowed"
+                }}>
                 <IconGrid/> Cards
               </button>
               <button
@@ -643,7 +696,7 @@ export default function App() {
       </div>
 
       {/* ── CONTENT ── */}
-      {view === "cards" ? (
+      {view === "cards" && isMobile ? (
         <>
           <div className="max-w-7xl mx-auto px-6 pt-4 pb-2 flex items-center gap-5 text-xs text-gray-400">
             <span className="flex items-center gap-1.5"><span className="inline-block w-0.5 h-4 bg-gray-700 rounded"/>Precio actual</span>
@@ -657,19 +710,24 @@ export default function App() {
         </>
       ) : (
         <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="bg-white rounded-2xl overflow-hidden" style={{ border:"1px solid #E5E7EB" }}>
-            <table className="w-full">
-              <thead>
-                <tr style={{ background:"#1E3A8A" }}>
-                  {["Ticker","Sector","Precio","Valor Intrínseco","Upside","ROIC","Score","Bear · Base · Bull"].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-white">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {data.map((stock, i) => <TableRow key={stock.ticker} stock={stock} onClick={setSelected} idx={i}/>)}
-              </tbody>
-            </table>
+        <div className="bg-white rounded-2xl overflow-hidden" style={{ border:"1px solid #E5E7EB" }}>
+          <table className="w-full">
+            <thead>
+              <tr>
+                {["Ticker","Sector","Precio","Intrínseco","Upside","ROIC","Score","Escenarios"].map(h => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide"
+                    style={{ color:"#64748B", background:"#F8FAFC", borderBottom:"1px solid #E2E8F0" }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((stock, i) => <TableRow key={stock.ticker} stock={stock} onClick={setSelected} idx={i}/>)}
+            </tbody>
+          </table>
           </div>
         </div>
       )}
