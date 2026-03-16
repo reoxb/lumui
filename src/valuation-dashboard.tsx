@@ -646,16 +646,90 @@ function Card({ stock, onClick }) {
   );
 }
 
+// ─── Table View Component (with truncation) ───────────────────────────────────
+function TableView({ data, onSelect }) {
+  const [showAll, setShowAll] = useState(false);
+  const displayData = showAll ? data : data.slice(0, 5);
+  const hasMore = data.length > 5;
+  
+  // Column background colors (Intrínseco = blue, Upside = green)
+  const colBgColors = [
+    null,           // Ticker
+    null,           // Sector  
+    null,           // Precio
+    '#EFF6FF',      // Intrínseco - blue light
+    '#F0FDF4',      // Upside - green light
+    null,           // FCF Yield
+    null,           // Score
+    null,           // Escenarios
+  ];
+  
+  return (
+    <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="bg-white rounded-2xl overflow-hidden" style={{ border:"1px solid #E5E7EB" }}>
+        <table className="w-full">
+          <thead>
+            <tr>
+              {["Ticker","Sector","Precio","Intrínseco","Upside","FCF Yield","Score","Escenarios"].map((h, i) => (
+                <th
+                  key={h}
+                  className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide"
+                  style={{ 
+                    color:"#64748B", 
+                    background: colBgColors[i] || '#F8FAFC',
+                    borderBottom:"1px solid #E2E8F0"
+                  }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {displayData.map((stock, i) => (
+              <TableRow 
+                key={stock.ticker} 
+                stock={stock} 
+                onClick={onSelect} 
+                idx={i}
+                colBgColors={colBgColors}
+              />
+            ))}
+          </tbody>
+        </table>
+        
+        {/* Show More Button */}
+        {hasMore && (
+          <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex justify-center">
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1.5 px-4 py-2 rounded-lg hover:bg-blue-50"
+            >
+              {showAll ? (
+                <>Ver menos <span className="text-lg leading-none">▲</span></>
+              ) : (
+                <>Ver todos ({data.length} stocks) <span className="text-lg leading-none">▼</span></>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Table Row ────────────────────────────────────────────────────────────────
-function TableRow({ stock, onClick, idx }) {
+function TableRow({ stock, onClick, idx, colBgColors = [] }) {
   const up  = upside(stock);
   const tag = SECTOR_TAGS[stock.inputs.sector] || { bg:"#F3F4F6", text:"#374151" };
+  
+  const cellBgs = colBgColors.map(bg => bg ? { background: bg } : {});
+  
   return (
     <tr
       onClick={() => onClick(stock)}
       className="cursor-pointer transition-colors hover:bg-sky-50"
       style={{ background: idx % 2 === 0 ? "#fff" : "#F8FAFC", borderBottom:"1px solid #E2E8F0" }}>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3" style={cellBgs[0]}>
         <div className="flex items-center gap-2">
           <span className="font-bold text-slate-900">{stock.ticker}</span>
           {stock.assumptions.growth_regime === "HYPER_GROWTH" && (
@@ -663,16 +737,16 @@ function TableRow({ stock, onClick, idx }) {
           )}
         </div>
       </td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3" style={cellBgs[1]}>
         <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background:tag.bg, color:tag.text }}>
           {stock.inputs.sector}
         </span>
       </td>
-      <td className="px-4 py-3 font-semibold text-slate-800">{money(stock.inputs.price)}</td>
-      <td className="px-4 py-3 font-semibold" style={{ color: up > 0 ? "#0EA5E9" : "#DC2626" }}>
+      <td className="px-4 py-3 font-semibold text-slate-800" style={cellBgs[2]}>{money(stock.inputs.price)}</td>
+      <td className="px-4 py-3 font-semibold" style={{ ...cellBgs[3], color: up > 0 ? "#0EA5E9" : "#DC2626" }}>
         {money(stock.valuation.intrinsic_value_per_share)}
       </td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3" style={cellBgs[4]}>
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-slate-400">Δ</span>
           <span className="font-semibold text-sm" style={{ color: up > 0 ? "#0F9F6E" : "#B91C1C" }}>
@@ -680,17 +754,17 @@ function TableRow({ stock, onClick, idx }) {
           </span>
         </div>
       </td>
-      <td className="px-4 py-3 font-semibold text-slate-700">
+      <td className="px-4 py-3 font-semibold text-slate-700" style={cellBgs[5]}>
         {pctFmt(stock.quality_metrics.fcf_yield)}
       </td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3" style={cellBgs[6]}>
         <span
           className="font-bold text-sm"
           style={{ color: stock.score >= 0.75 ? "#0EA5E9" : stock.score >= 0.6 ? "#F59E0B" : "#EF4444" }}>
           {(stock.score * 10).toFixed(1)}
         </span>
       </td>
-      <td className="px-4 py-3 align-top">
+      <td className="px-4 py-3 align-top" style={cellBgs[7]}>
         <ScenarioTrack stock={stock} compact />
       </td>
     </tr>
@@ -982,27 +1056,7 @@ export default function App() {
           </div>
         </>
       ) : (
-        <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="bg-white rounded-2xl overflow-hidden" style={{ border:"1px solid #E5E7EB" }}>
-          <table className="w-full">
-            <thead>
-              <tr>
-                {["Ticker","Sector","Precio","Intrínseco","Upside","FCF Yield","Score","Escenarios"].map(h => (
-                  <th
-                    key={h}
-                    className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide"
-                    style={{ color:"#64748B", background:"#F8FAFC", borderBottom:"1px solid #E2E8F0" }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((stock, i) => <TableRow key={stock.ticker} stock={stock} onClick={setSelected} idx={i}/>)}
-            </tbody>
-          </table>
-          </div>
-        </div>
+        <TableView data={data} onSelect={setSelected} />
       )}
 
       {/* ── CONTEXTUAL INTELLIGENCE FLAGS ── */}
