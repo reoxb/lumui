@@ -1163,7 +1163,7 @@ function StrategicMap({ data }) {
             {Object.entries(categoryLabels).map(([key, label]) => (
               <div key={key} className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: categoryColors[key] }}></div>
-                <span className="text-gray-600 text-xs">{label}</span>
+                <span className="text-gray-500 text-xs">{label}</span>
               </div>
             ))}
           </div>
@@ -1171,7 +1171,16 @@ function StrategicMap({ data }) {
         
         {/* Chart */}
         <div ref={containerRef} className="relative" style={{ height: `${chartHeight}px` }}>
-          <svg width={chartWidth} height={chartHeight} className="absolute inset-0">
+          <svg width={chartWidth} height={chartHeight} className="absolute inset-0" >
+            <defs>
+              <filter id="bubbleBlur" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
             {/* Quadrant backgrounds */}
             {/* Core Buy: High ROIC (>22), High MOS (>30) - Top Right */}
             <rect 
@@ -1200,10 +1209,10 @@ function StrategicMap({ data }) {
             
             {/* Grid lines */}
             {[0, 15, 30, 45, 60].map(y => (
-              <line key={`y-${y}`} x1={padding.left} y1={yScale(y)} x2={chartWidth - padding.right} y2={yScale(y)} stroke="#E5E7EB" strokeWidth="1" strokeDasharray="3,3" />
+              <line key={`y-${y}`} x1={padding.left} y1={yScale(y)} x2={chartWidth - padding.right} y2={yScale(y)} stroke="#334155" strokeWidth="1" strokeDasharray="3,3" opacity="0.2" />
             ))}
             {[-75, -37.5, 0, 37.5, 75, 112.5, 150, 187.5, 225].map(x => (
-              <line key={`x-${x}`} x1={xScale(x)} y1={padding.top} x2={xScale(x)} y2={chartHeight - padding.bottom} stroke="#E5E7EB" strokeWidth="1" strokeDasharray="3,3" />
+              <line key={`x-${x}`} x1={xScale(x)} y1={padding.top} x2={xScale(x)} y2={chartHeight - padding.bottom} stroke="#334155" strokeWidth="1" strokeDasharray="3,3" opacity="0.2" />
             ))}
             
             {/* Reference lines - solid and more prominent */}
@@ -1211,8 +1220,8 @@ function StrategicMap({ data }) {
             <line x1={padding.left} y1={yROI} x2={chartWidth - padding.right} y2={yROI} stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="5,5" />
             
             {/* Reference labels */}
-            <text x={xMOS30} y={padding.top - 8} textAnchor="middle" fill="#6B7280" fontSize="9" fontWeight="500">MOS 30%</text>
-            <text x={chartWidth - padding.right + 8} y={yROI + 3} textAnchor="start" fill="#6B7280" fontSize="9" fontWeight="500">ROI 22%</text>
+            <text x={xMOS30} y={padding.top - 8} textAnchor="middle" fill="#94A3B8" fontSize="9" fontWeight="500">MOS 30%</text>
+            <text x={chartWidth - padding.right + 8} y={yROI + 3} textAnchor="start" fill="#94A3B8" fontSize="9" fontWeight="500">ROI 22%</text>
             
             {/* Axes labels */}
             <text x={chartWidth / 2} y={chartHeight - 10} textAnchor="middle" fill="#6B7280" fontSize="10" fontWeight="500">VALOR (MOS %)</text>
@@ -1233,8 +1242,10 @@ function StrategicMap({ data }) {
               const isHovered = hoveredStock === point.ticker;
               const x = xScale(point.mos);
               const y = yScale(point.roic);
-              const radius = 4 + (point.score * 5);
-              
+              const baseRadius = Math.max(6, point.score * 26); // tamaño basado en score
+              const radius = isHovered ? baseRadius + 6 : baseRadius;
+              const color = categoryColors[point.category];
+
               return (
                 <g key={point.ticker}>
                   {/* Glow effect on hover */}
@@ -1242,23 +1253,32 @@ function StrategicMap({ data }) {
                     <circle
                       cx={x}
                       cy={y}
-                      r={radius + 6}
-                      fill={categoryColors[point.category]}
-                      opacity="0.2"
+                      r={radius + 8}
+                      fill={color}
+                      opacity="0.18"
                     />
                   )}
                   {/* Main circle */}
                   <circle
                     cx={x}
                     cy={y}
-                    r={isHovered ? radius + 2 : radius}
-                    fill={categoryColors[point.category]}
+                    r={radius}
+                    fill={color}
+                    fillOpacity={0.9}
                     stroke="white"
-                    strokeWidth="2"
-                    className="cursor-pointer transition-all"
-                    style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.15))' }}
+                    strokeWidth={isHovered ? 3 : 2}
+                    className="cursor-pointer transition-all duration-200"
+                    style={{ filter: 'drop-shadow(0 3px 12px rgba(15, 23, 42, 0.25))', backdropFilter: 'blur(1px)', mixBlendMode: 'multiply' }}
                     onMouseEnter={() => setHoveredStock(point.ticker)}
                     onMouseLeave={() => setHoveredStock(null)}
+                  />
+                  {/* Small inner highlight circle */}
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r={Math.max(1.5, radius * 0.3)}
+                    fill="#ffffff"
+                    fillOpacity={isHovered ? 0.6 : 0.35}
                   />
                 </g>
               );
