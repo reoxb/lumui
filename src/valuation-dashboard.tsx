@@ -923,33 +923,50 @@ export default function App() {
     <div className="min-h-screen" style={{ background:"#F8FAFC", fontFamily:"'Inter',system-ui,sans-serif" }}>
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
 
-      {/* ── TOP BAR: título a la izquierda, Resumen Estratégico a la derecha ── */}
+      {/* ── TOP BAR: título arriba, KPI cards en fila debajo ── */}
       <div className="bg-white border-b border-slate-200 px-6 py-5">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-          {/* Izquierda: Título y subtítulo */}
-          <div>
-            <h1 className="text-xl font-bold text-slate-800">Finsano Radar</h1>
-            <p className="text-sm text-slate-500 font-normal mt-1">Stock Valuation Analysis</p>
+        <div className="max-w-7xl mx-auto">
+          {/* Título y subtítulo */}
+          <div className="mb-4">
+            <h1 className="text-xl font-bold text-slate-800">Stock Valuation Analysis</h1>
+            <p className="text-sm text-slate-500 font-normal mt-1">Analyzing {raw.length} stocks across multiple sectors.</p>
           </div>
 
-          {/* Derecha: Card Resumen Estratégico */}
-          <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 shrink-0">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="min-w-[100px]">
-                <p className="text-xs font-normal text-slate-500">Total Stocks</p>
-                <p className="text-lg font-bold text-slate-800 mt-0.5">{raw.length}</p>
+          {/* KPI Cards - Full Width */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {/* Total Stocks - Blue/Purple */}
+            <div className="flex items-center bg-slate-50 rounded-lg overflow-hidden" style={{ border: "1px solid #E2E8F0" }}>
+              <div className="w-1 h-full bg-gradient-to-b from-blue-500 to-purple-500"></div>
+              <div className="px-4 py-3 flex-1">
+                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">Total Stocks</p>
+                <p className="text-xl font-bold text-slate-800">{raw.length}</p>
               </div>
-              <div className="min-w-[100px]">
-                <p className="text-xs font-normal text-slate-500">MOS Promedio</p>
-                <p className="text-lg font-bold text-slate-800 mt-0.5">{pctFmt(raw.reduce((s, d) => s + d.valuation.margin_of_safety, 0) / raw.length)}</p>
+            </div>
+            
+            {/* MOS Promedio - Green */}
+            <div className="flex items-center bg-slate-50 rounded-lg overflow-hidden" style={{ border: "1px solid #E2E8F0" }}>
+              <div className="w-1 h-full bg-emerald-500"></div>
+              <div className="px-4 py-3 flex-1">
+                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">MOS Promedio</p>
+                <p className="text-xl font-bold text-slate-800">{pctFmt(raw.reduce((s, d) => s + d.valuation.margin_of_safety, 0) / raw.length)}</p>
               </div>
-              <div className="min-w-[100px]">
-                <p className="text-xs font-normal text-slate-500">ROIC Promedio</p>
-                <p className="text-lg font-bold text-slate-800 mt-0.5">{pctFmt(avgRoic)}</p>
+            </div>
+            
+            {/* ROIC Promedio - Green */}
+            <div className="flex items-center bg-slate-50 rounded-lg overflow-hidden" style={{ border: "1px solid #E2E8F0" }}>
+              <div className="w-1 h-full bg-emerald-500"></div>
+              <div className="px-4 py-3 flex-1">
+                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">ROIC Promedio</p>
+                <p className="text-xl font-bold text-slate-800">{pctFmt(avgRoic)}</p>
               </div>
-              <div className="min-w-[100px]">
-                <p className="text-xs font-normal text-slate-500">Convicción Prom.</p>
-                <p className="text-lg font-bold text-slate-800 mt-0.5">{(raw.reduce((s, d) => s + d.score, 0) / raw.length * 100).toFixed(0)}%</p>
+            </div>
+            
+            {/* Convicción Prom. - Orange/Amber */}
+            <div className="flex items-center bg-slate-50 rounded-lg overflow-hidden" style={{ border: "1px solid #E2E8F0" }}>
+              <div className="w-1 h-full bg-amber-500"></div>
+              <div className="px-4 py-3 flex-1">
+                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">Convicción Prom.</p>
+                <p className="text-xl font-bold text-slate-800">{(raw.reduce((s, d) => s + d.score, 0) / raw.length * 100).toFixed(0)}%</p>
               </div>
             </div>
           </div>
