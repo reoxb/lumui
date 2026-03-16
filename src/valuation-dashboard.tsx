@@ -61,124 +61,201 @@ function ScenarioAsymmetryChart({ data }) {
     ...chartData.map(d => Math.abs(d.bearDownside))
   );
   
-  const chartHeight = 280;
-  const barWidth = Math.max(30, Math.min(50, (containerWidth - 64) / chartData.length - 8));
-  const gap = 8;
+  const chartHeight = 320;
+  const chartWidth = containerWidth || 800;
+  const padding = { top: 20, right: 20, bottom: 50, left: 60 };
+  const plotWidth = chartWidth - padding.left - padding.right;
+  const plotHeight = chartHeight - padding.top - padding.bottom;
+  const barWidth = Math.max(24, Math.min(40, plotWidth / chartData.length - 4));
+  
+  // Scale functions
+  const yScale = (val) => {
+    const ratio = (val + maxDistance) / (maxDistance * 2);
+    return padding.top + plotHeight - (ratio * plotHeight);
+  };
+  
+  const zeroY = yScale(0);
   
   return (
-    <div className="bg-white rounded-2xl p-4 md:p-6 mt-6" style={{ border:"1px solid #E5E7EB" }}>
+    <div className="bg-white rounded-2xl p-6 mt-6" style={{ border: "1px solid #E5E7EB" }}>
+      {/* Header */}
       <div className="mb-4">
-        <h3 className="text-lg font-bold text-gray-900">Asimetría de Escenarios</h3>
+        <h3 className="text-lg font-bold text-gray-900">Asimetria de Escenarios</h3>
         <p className="text-sm text-gray-500 mt-1">Perfil de riesgo/recompensa: Distancia desde precio actual</p>
       </div>
       
-      <div ref={containerRef} className="relative" style={{ height: `${chartHeight}px`, width: "100%" }}>
-        {/* Y-axis */}
-        <div className="absolute left-0 top-0 bottom-8 w-10 flex flex-col justify-between text-xs text-gray-500">
-          <span>+${maxDistance.toFixed(0)}</span>
-          <span>$0</span>
-          <span>-${maxDistance.toFixed(0)}</span>
-        </div>
+      {/* Chart */}
+      <div ref={containerRef} className="relative" style={{ height: `${chartHeight}px` }}>
+        <svg width={chartWidth} height={chartHeight} className="absolute inset-0">
+          {/* Grid lines - horizontal */}
+          {[2300, 1150, 0, -1150, -2300].map(val => (
+            <line 
+              key={`grid-${val}`} 
+              x1={padding.left} 
+              y1={yScale(val)} 
+              x2={chartWidth - padding.right} 
+              y2={yScale(val)} 
+              stroke="#E5E7EB" 
+              strokeWidth="1" 
+              strokeDasharray="2,2" 
+            />
+          ))}
+          
+          {/* Grid lines - vertical */}
+          {chartData.map((item, index) => {
+            const x = padding.left + (index * (plotWidth / chartData.length)) + (plotWidth / chartData.length / 2);
+            return (
+              <line 
+                key={`vgrid-${item.ticker}`} 
+                x1={x} 
+                y1={padding.top} 
+                x2={x} 
+                y2={chartHeight - padding.bottom} 
+                stroke="#F3F4F6" 
+                strokeWidth="1" 
+              />
+            );
+          })}
+          
+          {/* Zero line - bold black */}
+          <line 
+            x1={padding.left} 
+            y1={zeroY} 
+            x2={chartWidth - padding.right} 
+            y2={zeroY} 
+            stroke="#374151" 
+            strokeWidth="2" 
+          />
+          
+          {/* Y-axis labels */}
+          <text x={padding.left - 10} y={yScale(2300) + 4} textAnchor="end" fill="#6B7280" fontSize="10">2300</text>
+          <text x={padding.left - 10} y={yScale(1150) + 4} textAnchor="end" fill="#6B7280" fontSize="10">1150</text>
+          <text x={padding.left - 10} y={zeroY + 4} textAnchor="end" fill="#6B7280" fontSize="10" fontWeight="500">0</text>
+          <text x={padding.left - 10} y={yScale(-1150) + 4} textAnchor="end" fill="#6B7280" fontSize="10">-1150</text>
+          <text x={padding.left - 10} y={yScale(-2300) + 4} textAnchor="end" fill="#6B7280" fontSize="10">-2300</text>
+          
+          {/* Y-axis title */}
+          <text 
+            x={15} 
+            y={chartHeight / 2} 
+            textAnchor="middle" 
+            fill="#9CA3AF" 
+            fontSize="11" 
+            transform={`rotate(-90, 15, ${chartHeight / 2})`}
+          >
+            Distancia ($)
+          </text>
+          
+          {/* Bars */}
+          {chartData.map((item, index) => {
+            const x = padding.left + (index * (plotWidth / chartData.length)) + (plotWidth / chartData.length / 2);
+            const barHalfWidth = barWidth / 2;
+            
+            // Bull bar extends upward from zero
+            const bullValue = Math.abs(item.bullUpside);
+            const bullHeight = (bullValue / (maxDistance * 2)) * plotHeight;
+            const bullY = zeroY - bullHeight;
+            
+            // Bear bar extends downward from zero
+            const bearValue = Math.abs(item.bearDownside);
+            const bearHeight = (bearValue / (maxDistance * 2)) * plotHeight;
+            const bearY = zeroY;
+            
+            const isHovered = hoveredStock === item.ticker;
+            
+            return (
+              <g key={item.ticker}>
+                {/* Bull Upside Bar - always show if has value */}
+                {bullValue > 0 && (
+                  <rect
+                    x={x - barHalfWidth}
+                    y={bullY}
+                    width={barWidth}
+                    height={bullHeight}
+                    fill="#22C55E"
+                    rx="2"
+                    className="cursor-pointer"
+                    opacity={isHovered ? 0.8 : 1}
+                    onMouseEnter={() => setHoveredStock(item.ticker)}
+                    onMouseLeave={() => setHoveredStock(null)}
+                  />
+                )}
+                
+                {/* Bear Downside Bar - always show if has value */}
+                {bearValue > 0 && (
+                  <rect
+                    x={x - barHalfWidth}
+                    y={bearY}
+                    width={barWidth}
+                    height={bearHeight}
+                    fill="#EF4444"
+                    rx="2"
+                    className="cursor-pointer"
+                    opacity={isHovered ? 0.8 : 1}
+                    onMouseEnter={() => setHoveredStock(item.ticker)}
+                    onMouseLeave={() => setHoveredStock(null)}
+                  />
+                )}
+              </g>
+            );
+          })}
+        </svg>
         
-        {/* Chart area */}
-        <div className="ml-12 relative" style={{ height: "calc(100% - 32px)", width: "calc(100% - 48px)" }}>
-          {/* Zero line - subtle like grid */}
-          <div className="absolute left-0 right-0 border-t border-gray-300" style={{ top: "50%" }} />
-          
-          {/* Grid lines */}
-          <div className="absolute left-0 right-0 border-t border-gray-100" style={{ top: "25%" }} />
-          <div className="absolute left-0 right-0 border-t border-gray-100" style={{ top: "75%" }} />
-          
-          {/* Bars container */}
-          <div className="absolute inset-0 flex items-end justify-around" style={{ padding: `0 ${gap/2}px` }}>
-            {chartData.map((item) => {
-              const bullHeight = (item.bullUpside / maxDistance) * 50;
-              const bearHeight = (Math.abs(item.bearDownside) / maxDistance) * 50;
-              const isHovered = hoveredStock === item.ticker;
-              
-              return (
-                <div
-                  key={item.ticker}
-                  className="relative flex flex-col items-center cursor-pointer"
-                  style={{ 
-                    width: `${barWidth}px`,
-                    height: "100%"
-                  }}
-                  onMouseEnter={() => setHoveredStock(item.ticker)}
-                  onMouseLeave={() => setHoveredStock(null)}
-                >
-                  {/* Bull Upside Bar (top half) */}
-                  <div className="relative w-full flex-1 flex items-end justify-center">
-                    <div
-                      className="w-full transition-all duration-200"
-                      style={{
-                        height: `${bullHeight}%`,
-                        backgroundColor: "#10B981",
-                        opacity: isHovered ? 0.8 : 1,
-                        borderRadius: "2px 2px 0 0",
-                        minHeight: bullHeight > 0 ? "2px" : "0"
-                      }}
-                    />
-                  </div>
-                  
-                  {/* Zero line - yellow indicator */}
-                  <div className="w-full h-px bg-yellow-400" />
-                  
-                  {/* Bear Downside Bar (bottom half) */}
-                  <div className="relative w-full flex-1 flex items-start justify-center">
-                    <div
-                      className="w-full transition-all duration-200"
-                      style={{
-                        height: `${bearHeight}%`,
-                        backgroundColor: "#EF4444",
-                        opacity: isHovered ? 0.8 : 1,
-                        borderRadius: "0 0 2px 2px",
-                        minHeight: bearHeight > 0 ? "2px" : "0"
-                      }}
-                    />
-                  </div>
-                  
-                  {/* Tooltip */}
-                  {isHovered && (
-                    <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-gray-900 text-white p-2 rounded-lg shadow-lg z-20 whitespace-nowrap">
-                      <div className="font-bold text-xs mb-1">{item.ticker}</div>
-                      <div className="text-xs space-y-0.5">
-                        <div className="text-green-400">Bull: +${item.bullUpside.toFixed(2)}</div>
-                        <div className="text-red-400">Bear: ${item.bearDownside.toFixed(2)}</div>
-                      </div>
-                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full">
-                        <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+        {/* X-axis labels - HTML for better control */}
+        <div className="absolute bottom-0 left-0 right-0" style={{ height: `${padding.bottom}px`, paddingLeft: `${padding.left}px`, paddingRight: `${padding.right}px` }}>
+          <div className="flex h-full items-end justify-around">
+            {chartData.map((item) => (
+              <div
+                key={`label-${item.ticker}`}
+                className="text-xs text-gray-600 text-center"
+                style={{ 
+                  width: `${barWidth}px`,
+                  transform: 'rotate(-45deg)',
+                  transformOrigin: 'top center',
+                  marginBottom: '5px'
+                }}
+              >
+                {item.ticker}
+              </div>
+            ))}
           </div>
         </div>
         
-        {/* X-axis labels */}
-        <div className="absolute bottom-0 left-12 right-0 h-6 flex items-end justify-around" style={{ padding: `0 ${gap/2}px` }}>
-          {chartData.map((item) => (
+        {/* Tooltip */}
+        {hoveredStock && (() => {
+          const item = chartData.find(d => d.ticker === hoveredStock);
+          if (!item) return null;
+          
+          const index = chartData.indexOf(item);
+          const x = padding.left + (index * (plotWidth / chartData.length)) + (plotWidth / chartData.length / 2);
+          
+          return (
             <div
-              key={`label-${item.ticker}`}
-              className="text-xs text-gray-600 font-medium text-center truncate"
-              style={{ width: `${barWidth}px` }}
+              className="absolute bg-gray-900 text-white p-2 rounded-lg shadow-lg z-20 pointer-events-none text-xs"
+              style={{
+                left: `${x + 10}px`,
+                top: '20px',
+                transform: x > chartWidth / 2 ? 'translateX(-100%) translateX(-20px)' : 'translateX(0)'
+              }}
             >
-              {item.ticker}
+              <div className="font-bold mb-1">{item.ticker}</div>
+              <div className="space-y-0.5 text-gray-300">
+                <div className="text-green-400">Bull: +${item.bullUpside.toFixed(2)}</div>
+                <div className="text-red-400">Bear: ${item.bearDownside.toFixed(2)}</div>
+              </div>
             </div>
-          ))}
-        </div>
+          );
+        })()}
       </div>
       
       {/* Legend */}
       <div className="flex justify-center items-center gap-6 mt-4">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-green-500 rounded"></div>
+          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#22C55E' }}></div>
           <span className="text-xs text-gray-600">Bull Upside</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-red-500 rounded"></div>
+          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#EF4444' }}></div>
           <span className="text-xs text-gray-600">Bear Downside</span>
         </div>
       </div>
@@ -963,7 +1040,6 @@ function StrategicMap({ data }) {
     mos: (stock.valuation.margin_of_safety * 100),
     roic: (stock.quality_metrics.roic * 100),
     score: stock.score,
-    // Categorize stocks
     category: categorizeStock(stock)
   }));
   
@@ -978,171 +1054,141 @@ function StrategicMap({ data }) {
   }
   
   const categoryColors = {
-    'core-buy': '#10B981',
-    'valor-defensivo': '#0EA5E9',
-    'calidad-cara': '#F87171',
+    'core-buy': '#22C55E',
+    'valor-defensivo': '#3B82F6',
+    'calidad-cara': '#EF4444',
     'neutral': '#94A3B8'
   };
   
   // Chart dimensions
   const chartWidth = dimensions.width || 800;
-  const chartHeight = 500;
-  const padding = { top: 60, right: 80, bottom: 60, left: 80 };
+  const chartHeight = 450;
+  const padding = { top: 50, right: 60, bottom: 70, left: 70 };
   const plotWidth = chartWidth - padding.left - padding.right;
   const plotHeight = chartHeight - padding.top - padding.bottom;
   
   // Scales
   const xMin = -75, xMax = 225;
-  const yMin = -5, yMax = 65;
+  const yMin = 0, yMax = 60;
   
   const xScale = (val) => padding.left + ((val - xMin) / (xMax - xMin)) * plotWidth;
   const yScale = (val) => padding.top + plotHeight - ((val - yMin) / (yMax - yMin)) * plotHeight;
   
-  // Quadrant lines
-  const xCenter = xScale(75);
-  const yCenter = yScale(22.5);
+  // Reference lines
+  const xZero = xScale(0);
+  const yROI = yScale(22);
+  const xMOS30 = xScale(30);
   
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
-      <div className="bg-slate-900 rounded-2xl p-6 md:p-8" style={{ border: "1px solid #334155" }}>
+      <div className="bg-white rounded-2xl p-6 md:p-8" style={{ border: "1px solid #E5E7EB" }}>
         {/* Header */}
-        <div className="mb-6">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
-            Vista de Pajaro - El Radar Finsano
-          </p>
-          <h2 className="text-xl md:text-2xl font-bold text-white">
-            Mapa Estrategico de Asignacion — <span className="text-cyan-400">Calidad</span> vs. <span className="text-cyan-400">Valor</span>
+        <div className="mb-4">
+          <h2 className="text-xl font-bold text-gray-900">
+            Mapa Estrategico de Asignacion (El Radar Finsano)
           </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Calidad (ROIC) vs. Valoracion (MOS) • Tamaño = Conviccion
+          </p>
         </div>
         
         {/* Legend */}
-        <div className="flex flex-wrap items-center gap-6 mb-6 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            <span className="text-slate-300">Core Buy</span>
+        <div className="flex flex-wrap items-center gap-4 mb-4 text-sm">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: categoryColors['core-buy'] }}></div>
+            <span className="text-gray-600 text-xs">Core Buy</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-sky-500"></div>
-            <span className="text-slate-300">Valor Defensivo</span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: categoryColors['valor-defensivo'] }}></div>
+            <span className="text-gray-600 text-xs">Valor Defensivo</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-400"></div>
-            <span className="text-slate-300">Calidad Cara</span>
-          </div>
-          <div className="ml-auto text-xs text-slate-500">
-            Tamaño del punto = Conviccion del modelo
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: categoryColors['calidad-cara'] }}></div>
+            <span className="text-gray-600 text-xs">Calidad Cara</span>
           </div>
         </div>
         
         {/* Chart */}
         <div ref={containerRef} className="relative" style={{ height: `${chartHeight}px` }}>
           <svg width={chartWidth} height={chartHeight} className="absolute inset-0">
-            {/* Grid lines */}
+            {/* Background grid - light */}
             {[0, 15, 30, 45, 60].map(y => (
-              <line key={`y-${y}`} x1={padding.left} y1={yScale(y)} x2={chartWidth - padding.right} y2={yScale(y)} stroke="#334155" strokeDasharray="4,4" strokeWidth="1" />
+              <line key={`y-${y}`} x1={padding.left} y1={yScale(y)} x2={chartWidth - padding.right} y2={yScale(y)} stroke="#E5E7EB" strokeWidth="1" strokeDasharray="2,2" />
             ))}
-            {[-75, 0, 75, 150, 225].map(x => (
-              <line key={`x-${x}`} x1={xScale(x)} y1={padding.top} x2={xScale(x)} y2={chartHeight - padding.bottom} stroke="#334155" strokeDasharray="4,4" strokeWidth="1" />
+            {[-75, -37.5, 0, 37.5, 75, 112.5, 150, 187.5, 225].map(x => (
+              <line key={`x-${x}`} x1={xScale(x)} y1={padding.top} x2={xScale(x)} y2={chartHeight - padding.bottom} stroke="#E5E7EB" strokeWidth="1" strokeDasharray="2,2" />
             ))}
             
-            {/* Center lines (darker) */}
-            <line x1={xCenter} y1={padding.top} x2={xCenter} y2={chartHeight - padding.bottom} stroke="#475569" strokeWidth="2" strokeDasharray="5,5" />
-            <line x1={padding.left} y1={yCenter} x2={chartWidth - padding.right} y2={yCenter} stroke="#475569" strokeWidth="2" strokeDasharray="5,5" />
+            {/* Reference lines */}
+            <line x1={xZero} y1={padding.top} x2={xZero} y2={chartHeight - padding.bottom} stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="4,4" />
+            <line x1={padding.left} y1={yROI} x2={chartWidth - padding.right} y2={yROI} stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="4,4" />
+            
+            {/* Reference labels */}
+            <text x={xMOS30} y={padding.top - 10} textAnchor="middle" fill="#6B7280" fontSize="10">MOS 30%</text>
+            <text x={chartWidth - padding.right + 10} y={yROI + 4} textAnchor="start" fill="#6B7280" fontSize="10">ROI</text>
             
             {/* Axes labels */}
-            <text x={chartWidth / 2} y={chartHeight - 15} textAnchor="middle" fill="#94A3B8" fontSize="12">VALOR (MOS %)</text>
-            <text x={20} y={chartHeight / 2} textAnchor="middle" fill="#94A3B8" fontSize="12" transform={`rotate(-90, 20, ${chartHeight / 2})`}>CALIDAD (ROIC %)</text>
+            <text x={chartWidth / 2} y={chartHeight - 20} textAnchor="middle" fill="#6B7280" fontSize="11" fontWeight="500">VALOR (Margen de Seguridad %)</text>
+            <text x={20} y={chartHeight / 2} textAnchor="middle" fill="#6B7280" fontSize="11" fontWeight="500" transform={`rotate(-90, 20, ${chartHeight / 2})`}>CALIDAD (ROIC %)</text>
             
             {/* X-axis labels */}
             {[-75, 0, 75, 150, 225].map(x => (
-              <text key={`xlabel-${x}`} x={xScale(x)} y={chartHeight - padding.bottom + 20} textAnchor="middle" fill="#64748B" fontSize="11">{x}%</text>
+              <text key={`xlabel-${x}`} x={xScale(x)} y={chartHeight - padding.bottom + 18} textAnchor="middle" fill="#6B7280" fontSize="10">{x}%</text>
             ))}
             
             {/* Y-axis labels */}
             {[0, 15, 30, 45, 60].map(y => (
-              <text key={`ylabel-${y}`} x={padding.left - 10} y={yScale(y) + 4} textAnchor="end" fill="#64748B" fontSize="11">{y}%</text>
+              <text key={`ylabel-${y}`} x={padding.left - 8} y={yScale(y) + 4} textAnchor="end" fill="#6B7280" fontSize="10">{y}%</text>
             ))}
             
-            {/* Quadrant labels */}
-            <text x={xScale(37.5)} y={yScale(55)} textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="500">ESPERAR RETROCESO</text>
-            <text x={xScale(150)} y={yScale(55)} textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="500">COMPRA CORE</text>
-            <text x={xScale(37.5)} y={yScale(5)} textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="500">Trampas de Valor?</text>
-            <text x={xScale(150)} y={yScale(5)} textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="500">VALOR DEFENSIVO</text>
-            
-            {/* Data points */}
+            {/* Data points - simple circles */}
             {mapData.map((point) => {
               const isHovered = hoveredStock === point.ticker;
               const x = xScale(point.mos);
               const y = yScale(point.roic);
-              const radius = 6 + (point.score * 8); // Size based on conviction
-              
-              // Gradient ID for this point
-              const gradientId = `gradient-${point.ticker}`;
+              const radius = 5 + (point.score * 6);
               
               return (
                 <g key={point.ticker}>
-                  {/* Gradient definition */}
-                  <defs>
-                    <radialGradient id={gradientId} cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stopColor={categoryColors[point.category]} stopOpacity="1" />
-                      <stop offset="70%" stopColor={categoryColors[point.category]} stopOpacity="0.8" />
-                      <stop offset="100%" stopColor={categoryColors[point.category]} stopOpacity="0.4" />
-                    </radialGradient>
-                  </defs>
-                  
-                  {/* Outer glow */}
-                  <circle 
-                    cx={x} 
-                    cy={y} 
-                    r={radius + 3} 
-                    fill={`url(#${gradientId})`} 
-                    opacity="0.6"
-                    className="pointer-events-none"
-                  />
-                  
-                  {/* Glow effect for hovered */}
-                  {isHovered && (
-                    <circle cx={x} cy={y} r={radius + 6} fill={categoryColors[point.category]} opacity="0.3" />
-                  )}
-                  
-                  {/* Main point with solid center */}
+                  {/* Simple point */}
                   <circle
                     cx={x}
                     cy={y}
-                    r={radius}
+                    r={isHovered ? radius + 2 : radius}
                     fill={categoryColors[point.category]}
-                    stroke="#0F172A"
-                    strokeWidth="1.5"
+                    stroke="white"
+                    strokeWidth="2"
                     className="cursor-pointer transition-all"
                     onMouseEnter={() => setHoveredStock(point.ticker)}
                     onMouseLeave={() => setHoveredStock(null)}
                   />
-                  
-                  {/* Inner highlight */}
-                  <circle
-                    cx={x - radius * 0.2}
-                    cy={y - radius * 0.2}
-                    r={radius * 0.3}
-                    fill="white"
-                    opacity="0.3"
-                    className="pointer-events-none"
-                  />
-                  {/* Label */}
-                  <text
-                    x={x}
-                    y={y - radius - 5}
-                    textAnchor="middle"
-                    fill="white"
-                    fontSize="10"
-                    fontWeight="bold"
-                    className="pointer-events-none"
-                  >
-                    {point.ticker}
-                  </text>
                 </g>
               );
             })}
           </svg>
+          
+          {/* Labels positioned absolutely over the SVG */}
+          {mapData.map((point) => {
+            const x = xScale(point.mos);
+            const y = yScale(point.roic);
+            const radius = 5 + (point.score * 6);
+            
+            return (
+              <div
+                key={`label-${point.ticker}`}
+                className="absolute text-xs font-bold text-gray-800 pointer-events-none"
+                style={{
+                  left: `${x}px`,
+                  top: `${y - radius - 8}px`,
+                  transform: 'translateX(-50%)',
+                  fontSize: '10px',
+                  textShadow: '0 1px 2px rgba(255,255,255,0.8)'
+                }}
+              >
+                {point.ticker}
+              </div>
+            );
+          })}
           
           {/* Tooltip */}
           {hoveredStock && (() => {
@@ -1154,15 +1200,15 @@ function StrategicMap({ data }) {
             
             return (
               <div
-                className="absolute bg-slate-800 text-white p-3 rounded-lg shadow-xl border border-slate-600 z-20 pointer-events-none"
+                className="absolute bg-gray-900 text-white p-2 rounded-lg shadow-lg z-20 pointer-events-none text-xs"
                 style={{
                   left: `${x + 15}px`,
-                  top: `${y - 15}px`,
-                  transform: x > chartWidth / 2 ? 'translateX(-100%) translateX(-20px)' : 'translateX(0)'
+                  top: `${y - 10}px`,
+                  transform: x > chartWidth / 2 ? 'translateX(-100%) translateX(-25px)' : 'translateX(0)'
                 }}
               >
-                <div className="font-bold text-sm mb-1">{point.ticker}</div>
-                <div className="text-xs space-y-1 text-slate-300">
+                <div className="font-bold mb-1">{point.ticker}</div>
+                <div className="space-y-0.5 text-gray-300">
                   <div>MOS: {point.mos.toFixed(1)}%</div>
                   <div>ROIC: {point.roic.toFixed(1)}%</div>
                   <div>Score: {(point.score * 10).toFixed(1)}/10</div>
