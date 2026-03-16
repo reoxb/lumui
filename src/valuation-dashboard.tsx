@@ -32,7 +32,7 @@ function ScenarioAsymmetryChart({ data }) {
   const [hoveredStock, setHoveredStock] = useState(null);
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(0);
-  
+
   useEffect(() => {
     const updateWidth = () => {
       if (containerRef.current) {
@@ -43,155 +43,135 @@ function ScenarioAsymmetryChart({ data }) {
     window.addEventListener('resize', updateWidth);
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
-  
+
   // Calculate asymmetry data
   const chartData = data.map(stock => {
-    const bullDistance = stock.scenario_analysis.intrinsic_high - stock.inputs.price;
-    const bearDistance = stock.scenario_analysis.intrinsic_low - stock.inputs.price;
-    
+    const price = stock.inputs.price;
+    const low = stock.scenario_analysis.intrinsic_low;
+    const high = stock.scenario_analysis.intrinsic_high;
+    const bullValue = Math.max(high - price, 0);
+    const bearValue = Math.max(Math.abs(low - price), 0); // always show bear distance (absolute)
+    const asymRatio = bearValue === 0 ? Infinity : (bullValue / bearValue);
+
     return {
       ticker: stock.ticker,
-      bullUpside: bullDistance,
-      bearDownside: bearDistance,
+      price,
+      low,
+      high,
+      bullUpside: bullValue,
+      bearDownside: bearValue,
+      asymmetry: asymRatio,
     };
   });
 
   const maxDistance = Math.max(
     ...chartData.map(d => Math.abs(d.bullUpside)),
-    ...chartData.map(d => Math.abs(d.bearDownside))
+    ...chartData.map(d => Math.abs(d.bearDownside)),
+    1
   );
-  
+
   const chartHeight = 320;
-  const chartWidth = containerWidth || 800;
-  const padding = { top: 20, right: 20, bottom: 50, left: 60 };
+  const chartWidth = containerWidth || 820;
+  const padding = { top: 30, right: 20, bottom: 70, left: 60 };
   const plotWidth = chartWidth - padding.left - padding.right;
   const plotHeight = chartHeight - padding.top - padding.bottom;
-  const barWidth = Math.max(24, Math.min(40, plotWidth / chartData.length - 4));
-  
-  // Scale functions
+  const groupWidth = plotWidth / Math.max(chartData.length, 1);
+  const barWidth = Math.min(20, groupWidth * 0.35);
+  const groupGap = Math.max(12, groupWidth * 0.1);
+
+  const yTicks = [maxDistance, maxDistance * 0.5, 0, -maxDistance * 0.5, -maxDistance];
   const yScale = (val) => {
-    const ratio = (val + maxDistance) / (maxDistance * 2);
-    return padding.top + plotHeight - (ratio * plotHeight);
+    const ratio = (val + maxDistance) / (2 * maxDistance);
+    return padding.top + plotHeight - ratio * plotHeight;
   };
-  
   const zeroY = yScale(0);
-  
+
   return (
     <div className="bg-white rounded-2xl p-6 mt-6" style={{ border: "1px solid #E5E7EB" }}>
       {/* Header */}
-      <div className="mb-4">
+      <div className="mb-3">
         <h3 className="text-lg font-bold text-gray-900">Asimetria de Escenarios</h3>
         <p className="text-sm text-gray-500 mt-1">Perfil de riesgo/recompensa: Distancia desde precio actual</p>
       </div>
-      
+
       {/* Chart */}
       <div ref={containerRef} className="relative" style={{ height: `${chartHeight}px` }}>
         <svg width={chartWidth} height={chartHeight} className="absolute inset-0">
-          {/* Grid lines - horizontal */}
-          {[2300, 1150, 0, -1150, -2300].map(val => (
-            <line 
-              key={`grid-${val}`} 
-              x1={padding.left} 
-              y1={yScale(val)} 
-              x2={chartWidth - padding.right} 
-              y2={yScale(val)} 
-              stroke="#E5E7EB" 
-              strokeWidth="1" 
-              strokeDasharray="2,2" 
-            />
-          ))}
-          
-          {/* Grid lines - vertical */}
-          {chartData.map((item, index) => {
-            const x = padding.left + (index * (plotWidth / chartData.length)) + (plotWidth / chartData.length / 2);
-            return (
-              <line 
-                key={`vgrid-${item.ticker}`} 
-                x1={x} 
-                y1={padding.top} 
-                x2={x} 
-                y2={chartHeight - padding.bottom} 
-                stroke="#F3F4F6" 
-                strokeWidth="1" 
+          {yTicks.map((val) => (
+            <g key={`grid-${val}`}>
+              <line
+                x1={padding.left}
+                y1={yScale(val)}
+                x2={chartWidth - padding.right}
+                y2={yScale(val)}
+                stroke="#E5E7EB"
+                strokeWidth={val === 0 ? 2 : 1}
+                strokeDasharray={val === 0 ? "" : "2,2"}
               />
-            );
-          })}
-          
-          {/* Zero line - bold black */}
-          <line 
-            x1={padding.left} 
-            y1={zeroY} 
-            x2={chartWidth - padding.right} 
-            y2={zeroY} 
-            stroke="#374151" 
-            strokeWidth="2" 
-          />
-          
-          {/* Y-axis labels */}
-          <text x={padding.left - 10} y={yScale(2300) + 4} textAnchor="end" fill="#6B7280" fontSize="10">2300</text>
-          <text x={padding.left - 10} y={yScale(1150) + 4} textAnchor="end" fill="#6B7280" fontSize="10">1150</text>
-          <text x={padding.left - 10} y={zeroY + 4} textAnchor="end" fill="#6B7280" fontSize="10" fontWeight="500">0</text>
-          <text x={padding.left - 10} y={yScale(-1150) + 4} textAnchor="end" fill="#6B7280" fontSize="10">-1150</text>
-          <text x={padding.left - 10} y={yScale(-2300) + 4} textAnchor="end" fill="#6B7280" fontSize="10">-2300</text>
-          
+              <text
+                x={padding.left - 10}
+                y={yScale(val) + 4}
+                textAnchor="end"
+                fill="#6B7280"
+                fontSize="10"
+                fontWeight={val === 0 ? 600 : 400}
+              >
+                {val.toFixed(0)}
+              </text>
+            </g>
+          ))}
+
           {/* Y-axis title */}
-          <text 
-            x={15} 
-            y={chartHeight / 2} 
-            textAnchor="middle" 
-            fill="#9CA3AF" 
-            fontSize="11" 
+          <text
+            x={15}
+            y={chartHeight / 2}
+            textAnchor="middle"
+            fill="#9CA3AF"
+            fontSize="11"
             transform={`rotate(-90, 15, ${chartHeight / 2})`}
           >
             Distancia ($)
           </text>
-          
-          {/* Bars */}
+
           {chartData.map((item, index) => {
-            const x = padding.left + (index * (plotWidth / chartData.length)) + (plotWidth / chartData.length / 2);
-            const barHalfWidth = barWidth / 2;
-            
-            // Bull bar extends upward from zero
-            const bullValue = Math.abs(item.bullUpside);
-            const bullHeight = (bullValue / (maxDistance * 2)) * plotHeight;
-            const bullY = zeroY - bullHeight;
-            
-            // Bear bar extends downward from zero
-            const bearValue = Math.abs(item.bearDownside);
-            const bearHeight = (bearValue / (maxDistance * 2)) * plotHeight;
-            const bearY = zeroY;
-            
+            const groupWidth = plotWidth / Math.max(chartData.length, 1);
+            const effectiveBarWidth = Math.min(barWidth, Math.max(10, groupWidth * 0.2));
+            const offsetX = padding.left + index * groupWidth + (groupWidth - (effectiveBarWidth * 2 + 3)) / 2;
+            const bullX = offsetX;
+            const bearX = offsetX + effectiveBarWidth + 3;
+
+            const bull = Math.max(item.bullUpside, 0);
+            const bear = Math.max(item.bearDownside, 0);
+            const bullHeight = (bull / (2 * maxDistance)) * plotHeight;
+            const bearHeight = (bear / (2 * maxDistance)) * plotHeight;
             const isHovered = hoveredStock === item.ticker;
-            
+
             return (
               <g key={item.ticker}>
-                {/* Bull Upside Bar - always show if has value */}
-                {bullValue > 0 && (
+                {bull > 0 && (
                   <rect
-                    x={x - barHalfWidth}
-                    y={bullY}
+                    x={bullX}
+                    y={zeroY - bullHeight}
                     width={barWidth}
                     height={bullHeight}
                     fill="#22C55E"
-                    rx="2"
-                    className="cursor-pointer"
+                    rx="3"
                     opacity={isHovered ? 0.8 : 1}
+                    className="cursor-pointer"
                     onMouseEnter={() => setHoveredStock(item.ticker)}
                     onMouseLeave={() => setHoveredStock(null)}
                   />
                 )}
-                
-                {/* Bear Downside Bar - always show if has value */}
-                {bearValue > 0 && (
+                {bear > 0 && (
                   <rect
-                    x={x - barHalfWidth}
-                    y={bearY}
+                    x={bearX}
+                    y={zeroY}
                     width={barWidth}
                     height={bearHeight}
                     fill="#EF4444"
-                    rx="2"
-                    className="cursor-pointer"
+                    rx="3"
                     opacity={isHovered ? 0.8 : 1}
+                    className="cursor-pointer"
                     onMouseEnter={() => setHoveredStock(item.ticker)}
                     onMouseLeave={() => setHoveredStock(null)}
                   />
@@ -200,54 +180,58 @@ function ScenarioAsymmetryChart({ data }) {
             );
           })}
         </svg>
-        
-        {/* X-axis labels - HTML for better control */}
-        <div className="absolute bottom-0 left-0 right-0" style={{ height: `${padding.bottom}px`, paddingLeft: `${padding.left}px`, paddingRight: `${padding.right}px` }}>
-          <div className="flex h-full items-end justify-around">
-            {chartData.map((item) => (
+
+        {/* X-axis labels */}
+        <div className="absolute bottom-0 left-0 right-0" style={{ height: `${padding.bottom}px` }}>
+          {chartData.map((item, index) => {
+            const groupWidth = plotWidth / Math.max(chartData.length, 1);
+            const xCenter = padding.left + index * groupWidth + groupWidth / 2;
+            return (
               <div
                 key={`label-${item.ticker}`}
-                className="text-xs text-gray-600 text-center"
-                style={{ 
-                  width: `${barWidth}px`,
-                  transform: 'rotate(-45deg)',
+                className="text-xs text-gray-600 text-center absolute"
+                style={{
+                  left: `${xCenter}px`,
+                  bottom: '6px',
+                  width: `${groupWidth}px`,
+                  transform: 'translateX(-50%) rotate(-45deg)',
                   transformOrigin: 'top center',
-                  marginBottom: '5px'
+                  whiteSpace: 'nowrap',
+                  lineHeight: '1'
                 }}
               >
                 {item.ticker}
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
-        
+
         {/* Tooltip */}
         {hoveredStock && (() => {
           const item = chartData.find(d => d.ticker === hoveredStock);
           if (!item) return null;
-          
+
           const index = chartData.indexOf(item);
-          const x = padding.left + (index * (plotWidth / chartData.length)) + (plotWidth / chartData.length / 2);
-          
+          const x = padding.left + index * (plotWidth / Math.max(chartData.length, 1)) + (plotWidth / Math.max(chartData.length, 1) / 2);
+          const asym = item.asymmetry;
+
           return (
             <div
               className="absolute bg-gray-900 text-white p-2 rounded-lg shadow-lg z-20 pointer-events-none text-xs"
               style={{
                 left: `${x + 10}px`,
-                top: '20px',
+                top: '16px',
                 transform: x > chartWidth / 2 ? 'translateX(-100%) translateX(-20px)' : 'translateX(0)'
               }}
             >
               <div className="font-bold mb-1">{item.ticker}</div>
-              <div className="space-y-0.5 text-gray-300">
-                <div className="text-green-400">Bull: +${item.bullUpside.toFixed(2)}</div>
-                <div className="text-red-400">Bear: ${item.bearDownside.toFixed(2)}</div>
-              </div>
+              <div className="text-green-300">Bull: +{item.bullUpside.toFixed(2)}</div>
+              <div className="text-red-300">Bear: +{item.bearDownside.toFixed(2)}</div>
             </div>
           );
         })()}
       </div>
-      
+
       {/* Legend */}
       <div className="flex justify-center items-center gap-6 mt-4">
         <div className="flex items-center gap-2">
