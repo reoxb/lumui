@@ -928,8 +928,8 @@ export default function App() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           {/* Izquierda: Título y subtítulo */}
           <div>
-            <h1 className="text-xl font-bold text-slate-800">Stock Valuation Analysis</h1>
-            <p className="text-sm text-slate-500 font-normal mt-1">Analyzing {raw.length} stocks across multiple sectors.</p>
+            <h1 className="text-xl font-bold text-slate-800">Finsano Radar</h1>
+            <p className="text-sm text-slate-500 font-normal mt-1">Stock Valuation Analysis</p>
           </div>
 
           {/* Derecha: Card Resumen Estratégico */}
@@ -1059,11 +1059,11 @@ export default function App() {
         <TableView data={data} onSelect={setSelected} />
       )}
 
-      {/* ── CONTEXTUAL INTELLIGENCE FLAGS ── */}
-      <ContextualFlags data={data} />
-
       {/* ── STRATEGIC MAP ── */}
       <StrategicMap data={data} />
+
+      {/* ── CONTEXTUAL INTELLIGENCE FLAGS ── */}
+      <ContextualFlags data={data} />
 
       <Modal stock={selected} onClose={() => setSelected(null)}/>
     </div>
