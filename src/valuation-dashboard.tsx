@@ -1060,10 +1060,17 @@ function StrategicMap({ data }) {
     'neutral': '#94A3B8'
   };
   
+  const categoryLabels = {
+    'core-buy': 'Core Buy',
+    'valor-defensivo': 'Defensivo',
+    'calidad-cara': 'Calidad Cara',
+    'neutral': 'Neutral'
+  };
+  
   // Chart dimensions
   const chartWidth = dimensions.width || 800;
-  const chartHeight = 450;
-  const padding = { top: 50, right: 60, bottom: 70, left: 70 };
+  const chartHeight = 420;
+  const padding = { top: 40, right: 50, bottom: 60, left: 60 };
   const plotWidth = chartWidth - padding.left - padding.right;
   const plotHeight = chartHeight - padding.top - padding.bottom;
   
@@ -1074,83 +1081,118 @@ function StrategicMap({ data }) {
   const xScale = (val) => padding.left + ((val - xMin) / (xMax - xMin)) * plotWidth;
   const yScale = (val) => padding.top + plotHeight - ((val - yMin) / (yMax - yMin)) * plotHeight;
   
-  // Reference lines
+  // Reference lines positions
   const xZero = xScale(0);
-  const yROI = yScale(22);
-  const xMOS30 = xScale(30);
+  const yROI = yScale(22); // ROI threshold
+  const xMOS30 = xScale(30); // MOS 30% threshold
+  
+  // Quadrant coordinates
+  const rightX = xScale(xMax);
+  const leftX = xScale(xMin);
+  const topY = yScale(yMax);
+  const bottomY = yScale(yMin);
   
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
-      <div className="bg-white rounded-2xl p-6 md:p-8" style={{ border: "1px solid #E5E7EB" }}>
+      <div className="bg-white rounded-2xl p-6" style={{ border: "1px solid #E5E7EB" }}>
         {/* Header */}
-        <div className="mb-4">
-          <h2 className="text-xl font-bold text-gray-900">
-            Mapa Estrategico de Asignacion (El Radar Finsano)
-          </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Calidad (ROIC) vs. Valoracion (MOS) • Tamaño = Conviccion
-          </p>
-        </div>
-        
-        {/* Legend */}
-        <div className="flex flex-wrap items-center gap-4 mb-4 text-sm">
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: categoryColors['core-buy'] }}></div>
-            <span className="text-gray-600 text-xs">Core Buy</span>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Mapa Estratégico (Radar)</h2>
+            <p className="text-xs text-gray-500 mt-1">
+              ROIC vs Margen de Seguridad • Tamaño = Score
+            </p>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: categoryColors['valor-defensivo'] }}></div>
-            <span className="text-gray-600 text-xs">Valor Defensivo</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: categoryColors['calidad-cara'] }}></div>
-            <span className="text-gray-600 text-xs">Calidad Cara</span>
+          {/* Legend */}
+          <div className="flex items-center gap-4">
+            {Object.entries(categoryLabels).map(([key, label]) => (
+              <div key={key} className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: categoryColors[key] }}></div>
+                <span className="text-gray-600 text-xs">{label}</span>
+              </div>
+            ))}
           </div>
         </div>
         
         {/* Chart */}
         <div ref={containerRef} className="relative" style={{ height: `${chartHeight}px` }}>
           <svg width={chartWidth} height={chartHeight} className="absolute inset-0">
-            {/* Background grid - light */}
+            {/* Quadrant backgrounds */}
+            {/* Core Buy: High ROIC (>22), High MOS (>30) - Top Right */}
+            <rect 
+              x={xMOS30} y={topY} 
+              width={rightX - xMOS30} height={yROI - topY}
+              fill="rgba(34, 197, 94, 0.06)" 
+            />
+            {/* Valor Defensivo: High MOS (>30), Low ROIC - Bottom Right */}
+            <rect 
+              x={xMOS30} y={yROI} 
+              width={rightX - xMOS30} height={bottomY - yROI}
+              fill="rgba(59, 130, 246, 0.06)" 
+            />
+            {/* Calidad Cara: High ROIC (>22), Low MOS - Top Left */}
+            <rect 
+              x={leftX} y={topY} 
+              width={xMOS30 - leftX} height={yROI - topY}
+              fill="rgba(239, 68, 68, 0.06)" 
+            />
+            {/* Neutral: Low ROIC, Low MOS - Bottom Left */}
+            <rect 
+              x={leftX} y={yROI} 
+              width={xMOS30 - leftX} height={bottomY - yROI}
+              fill="rgba(148, 163, 184, 0.04)" 
+            />
+            
+            {/* Grid lines */}
             {[0, 15, 30, 45, 60].map(y => (
-              <line key={`y-${y}`} x1={padding.left} y1={yScale(y)} x2={chartWidth - padding.right} y2={yScale(y)} stroke="#E5E7EB" strokeWidth="1" strokeDasharray="2,2" />
+              <line key={`y-${y}`} x1={padding.left} y1={yScale(y)} x2={chartWidth - padding.right} y2={yScale(y)} stroke="#E5E7EB" strokeWidth="1" strokeDasharray="3,3" />
             ))}
             {[-75, -37.5, 0, 37.5, 75, 112.5, 150, 187.5, 225].map(x => (
-              <line key={`x-${x}`} x1={xScale(x)} y1={padding.top} x2={xScale(x)} y2={chartHeight - padding.bottom} stroke="#E5E7EB" strokeWidth="1" strokeDasharray="2,2" />
+              <line key={`x-${x}`} x1={xScale(x)} y1={padding.top} x2={xScale(x)} y2={chartHeight - padding.bottom} stroke="#E5E7EB" strokeWidth="1" strokeDasharray="3,3" />
             ))}
             
-            {/* Reference lines */}
-            <line x1={xZero} y1={padding.top} x2={xZero} y2={chartHeight - padding.bottom} stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="4,4" />
-            <line x1={padding.left} y1={yROI} x2={chartWidth - padding.right} y2={yROI} stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="4,4" />
+            {/* Reference lines - solid and more prominent */}
+            <line x1={xMOS30} y1={padding.top} x2={xMOS30} y2={chartHeight - padding.bottom} stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="5,5" />
+            <line x1={padding.left} y1={yROI} x2={chartWidth - padding.right} y2={yROI} stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="5,5" />
             
             {/* Reference labels */}
-            <text x={xMOS30} y={padding.top - 10} textAnchor="middle" fill="#6B7280" fontSize="10">MOS 30%</text>
-            <text x={chartWidth - padding.right + 10} y={yROI + 4} textAnchor="start" fill="#6B7280" fontSize="10">ROI</text>
+            <text x={xMOS30} y={padding.top - 8} textAnchor="middle" fill="#6B7280" fontSize="9" fontWeight="500">MOS 30%</text>
+            <text x={chartWidth - padding.right + 8} y={yROI + 3} textAnchor="start" fill="#6B7280" fontSize="9" fontWeight="500">ROI 22%</text>
             
             {/* Axes labels */}
-            <text x={chartWidth / 2} y={chartHeight - 20} textAnchor="middle" fill="#6B7280" fontSize="11" fontWeight="500">VALOR (Margen de Seguridad %)</text>
-            <text x={20} y={chartHeight / 2} textAnchor="middle" fill="#6B7280" fontSize="11" fontWeight="500" transform={`rotate(-90, 20, ${chartHeight / 2})`}>CALIDAD (ROIC %)</text>
+            <text x={chartWidth / 2} y={chartHeight - 10} textAnchor="middle" fill="#6B7280" fontSize="10" fontWeight="500">VALOR (MOS %)</text>
+            <text x={18} y={chartHeight / 2} textAnchor="middle" fill="#6B7280" fontSize="10" fontWeight="500" transform={`rotate(-90, 18, ${chartHeight / 2})`}>CALIDAD (ROIC %)</text>
             
             {/* X-axis labels */}
             {[-75, 0, 75, 150, 225].map(x => (
-              <text key={`xlabel-${x}`} x={xScale(x)} y={chartHeight - padding.bottom + 18} textAnchor="middle" fill="#6B7280" fontSize="10">{x}%</text>
+              <text key={`xlabel-${x}`} x={xScale(x)} y={chartHeight - padding.bottom + 14} textAnchor="middle" fill="#6B7280" fontSize="9">{x}%</text>
             ))}
             
             {/* Y-axis labels */}
             {[0, 15, 30, 45, 60].map(y => (
-              <text key={`ylabel-${y}`} x={padding.left - 8} y={yScale(y) + 4} textAnchor="end" fill="#6B7280" fontSize="10">{y}%</text>
+              <text key={`ylabel-${y}`} x={padding.left - 6} y={yScale(y) + 3} textAnchor="end" fill="#6B7280" fontSize="9">{y}%</text>
             ))}
             
-            {/* Data points - simple circles */}
+            {/* Data points */}
             {mapData.map((point) => {
               const isHovered = hoveredStock === point.ticker;
               const x = xScale(point.mos);
               const y = yScale(point.roic);
-              const radius = 5 + (point.score * 6);
+              const radius = 4 + (point.score * 5);
               
               return (
                 <g key={point.ticker}>
-                  {/* Simple point */}
+                  {/* Glow effect on hover */}
+                  {isHovered && (
+                    <circle
+                      cx={x}
+                      cy={y}
+                      r={radius + 6}
+                      fill={categoryColors[point.category]}
+                      opacity="0.2"
+                    />
+                  )}
+                  {/* Main circle */}
                   <circle
                     cx={x}
                     cy={y}
@@ -1159,6 +1201,7 @@ function StrategicMap({ data }) {
                     stroke="white"
                     strokeWidth="2"
                     className="cursor-pointer transition-all"
+                    style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.15))' }}
                     onMouseEnter={() => setHoveredStock(point.ticker)}
                     onMouseLeave={() => setHoveredStock(null)}
                   />
@@ -1167,22 +1210,23 @@ function StrategicMap({ data }) {
             })}
           </svg>
           
-          {/* Labels positioned absolutely over the SVG */}
+          {/* Ticker labels */}
           {mapData.map((point) => {
             const x = xScale(point.mos);
             const y = yScale(point.roic);
-            const radius = 5 + (point.score * 6);
+            const radius = 4 + (point.score * 5);
             
             return (
               <div
                 key={`label-${point.ticker}`}
-                className="absolute text-xs font-bold text-gray-800 pointer-events-none"
+                className="absolute text-[10px] font-bold text-gray-700 pointer-events-none"
                 style={{
                   left: `${x}px`,
-                  top: `${y - radius - 8}px`,
+                  top: `${y - radius - 6}px`,
                   transform: 'translateX(-50%)',
-                  fontSize: '10px',
-                  textShadow: '0 1px 2px rgba(255,255,255,0.8)'
+                  textShadow: '0 1px 2px rgba(255,255,255,0.9)',
+                  opacity: hoveredStock && hoveredStock !== point.ticker ? 0.4 : 1,
+                  transition: 'opacity 0.2s'
                 }}
               >
                 {point.ticker}
@@ -1190,28 +1234,66 @@ function StrategicMap({ data }) {
             );
           })}
           
-          {/* Tooltip */}
+          {/* Enhanced Tooltip */}
           {hoveredStock && (() => {
             const point = mapData.find(p => p.ticker === hoveredStock);
             if (!point) return null;
             
             const x = xScale(point.mos);
             const y = yScale(point.roic);
+            const isRightSide = x > chartWidth / 2;
             
             return (
               <div
-                className="absolute bg-gray-900 text-white p-2 rounded-lg shadow-lg z-20 pointer-events-none text-xs"
+                className="absolute z-20 pointer-events-none"
                 style={{
-                  left: `${x + 15}px`,
-                  top: `${y - 10}px`,
-                  transform: x > chartWidth / 2 ? 'translateX(-100%) translateX(-25px)' : 'translateX(0)'
+                  left: isRightSide ? `${x - 180}px` : `${x + 15}px`,
+                  top: `${Math.max(10, Math.min(y - 50, chartHeight - 120))}px`,
+                  width: '170px'
                 }}
               >
-                <div className="font-bold mb-1">{point.ticker}</div>
-                <div className="space-y-0.5 text-gray-300">
-                  <div>MOS: {point.mos.toFixed(1)}%</div>
-                  <div>ROIC: {point.roic.toFixed(1)}%</div>
-                  <div>Score: {(point.score * 10).toFixed(1)}/10</div>
+                <div 
+                  className="rounded-xl p-3 shadow-xl border"
+                  style={{ 
+                    background: 'rgba(30, 41, 59, 0.98)', 
+                    borderColor: categoryColors[point.category],
+                    backdropFilter: 'blur(8px)'
+                  }}
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-white text-sm">{point.ticker}</span>
+                    <span 
+                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                      style={{ 
+                        background: `${categoryColors[point.category]}30`,
+                        color: categoryColors[point.category]
+                      }}
+                    >
+                      {categoryLabels[point.category]}
+                    </span>
+                  </div>
+                  
+                  {/* Stats */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] text-gray-400">Score</span>
+                      <span className="text-[11px] font-mono text-white">{(point.score * 10).toFixed(0)}/100</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] text-gray-400">ROIC</span>
+                      <span className="text-[11px] font-mono text-white">{point.roic.toFixed(1)}%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] text-gray-400">MOS</span>
+                      <span 
+                        className="text-[11px] font-mono"
+                        style={{ color: point.mos > 0 ? '#22C55E' : '#EF4444' }}
+                      >
+                        {point.mos > 0 ? '+' : ''}{point.mos.toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             );
