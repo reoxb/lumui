@@ -89,11 +89,12 @@ function ScenarioAsymmetryChart({ data, darkMode }) {
   const zeroY = yScale(0);
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 mt-6 transition-colors" style={{ border: "1px solid var(--chart-grid)" }}>
+    <div className="bg-white dark:bg-[#0D1117] rounded-2xl p-6 mt-6 transition-colors" 
+      style={{ border: "1px solid var(--chart-grid)", background: darkMode ? '#0D1117' : '#fff' }}>
       {/* Header */}
       <div className="mb-3">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">Asimetria de Escenarios</h3>
-        <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Perfil de riesgo/recompensa: Distancia desde precio actual</p>
+        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Asimetria de Escenarios</h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Perfil de riesgo/recompensa: Distancia desde precio actual</p>
       </div>
 
       {/* Chart */}
@@ -114,18 +115,26 @@ function ScenarioAsymmetryChart({ data, darkMode }) {
                 x={padding.left - 10}
                 y={yScale(val) + 4}
                 textAnchor="end"
-                fill={darkMode ? "#4B5563" : "#9CA3AF"}
+                fill={darkMode ? "#94A3B8" : "#9CA3AF"}
                 fontSize="9"
                 fontWeight={val === 0 ? 600 : 400}
               >
-                {val > 0 ? `+$${val}` : val < 0 ? `-$${Math.abs(val)}` : `$${val}`}
+                {(() => {
+                  const abs = Math.abs(val);
+                  let label = "";
+                  if (abs >= 1e9) label = (val/1e9).toFixed(1) + "B";
+                  else if (abs >= 1e6) label = (val/1e6).toFixed(1) + "M";
+                  else if (abs >= 1e3) label = (val/1e3).toFixed(1) + "k";
+                  else label = val.toFixed(0);
+                  return val > 0 ? `+$${label}` : val < 0 ? `-$${label.replace('-','')}` : `$${label}`;
+                })()}
               </text>
               {val === 0 && (
                 <text
                   x={chartWidth - padding.right + 5}
                   y={yScale(val) - 5}
                   textAnchor="end"
-                  fill={darkMode ? "#4B5563" : "#9CA3AF"}
+                  fill={darkMode ? "#94A3B8" : "#9CA3AF"}
                   fontSize="8"
                   fontWeight="bold"
                   className="uppercase tracking-widest"
@@ -203,7 +212,7 @@ function ScenarioAsymmetryChart({ data, darkMode }) {
             return (
               <div
                 key={`label-${item.ticker}`}
-                className="absolute text-[10px] font-bold text-slate-500 dark:text-slate-400"
+                className="absolute text-[10px] font-bold text-slate-500 dark:text-slate-300"
                 style={{
                   left: `${x}px`,
                   transform: 'translateX(-50%) rotate(-45deg)',
@@ -536,11 +545,11 @@ function ScenarioTrack({ stock, compact = false, darkMode }) {
   if (compact) {
     return (
       <div className="relative h-4 w-full flex items-center">
-        <div className="h-0.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full" />
+        <div className="h-0.5 w-full rounded-full" style={{ background: 'var(--chart-grid)' }} />
         <div className="absolute h-0.5 bg-blue-500/50 rounded-full" style={{ left: `${pct(bear_value)}%`, width: `${pct(bull_value) - pct(bear_value)}%` }} />
-        <div className="absolute w-1.5 h-1.5 rounded-full bg-rose-400 border border-white dark:border-slate-900" style={{ left: `${pct(bear_value)}%`, transform: 'translateX(-50%)' }} />
+        <div className="absolute w-1.5 h-1.5 rounded-full bg-rose-400 border" style={{ borderColor: 'var(--surface)', left: `${pct(bear_value)}%`, transform: 'translateX(-50%)' }} />
         <div className="absolute w-1.5 h-1.5 rounded-full bg-white border border-blue-500" style={{ left: `${pct(base)}%`, transform: 'translateX(-50%)' }} />
-        <div className="absolute w-1.5 h-1.5 rounded-full bg-emerald-400 border border-white dark:border-slate-900" style={{ left: `${pct(bull_value)}%`, transform: 'translateX(-50%)' }} />
+        <div className="absolute w-1.5 h-1.5 rounded-full bg-emerald-400 border" style={{ borderColor: 'var(--surface)', left: `${pct(bull_value)}%`, transform: 'translateX(-50%)' }} />
       </div>
     );
   }
@@ -573,7 +582,8 @@ function Card({ stock, onClick, darkMode }) {
 
   return (
     <div onClick={() => onClick(stock)}
-      className="bg-white dark:bg-slate-800 rounded-2xl p-5 cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border border-slate-200 dark:border-slate-700">
+      className="rounded-2xl p-5 cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border shadow-sm"
+      style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
       <div className="flex justify-between items-start">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -636,24 +646,26 @@ function TableView({ data, onSelect, darkMode, showAll }) {
     <div className="w-full">
       <table className="w-full text-left">
         <thead>
-          <tr className="border-b border-slate-100 dark:border-[#1F2937]">
+          <tr className="border-b" style={{ borderColor: 'var(--chart-grid)' }}>
             {["Ticker","Sector","Price","Intrinsic","Upside%","FCF Yield","Score","Scenario Range"].map((h) => (
               <th
                 key={h}
-                className="px-6 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-transparent"
+                className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest bg-transparent transition-colors"
+                style={{ color: 'var(--chart-text)' }}
               >
                 {h}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-50 dark:divide-[#1B2129]">
+        <tbody className="divide-y" style={{ borderColor: 'var(--chart-grid)' }}>
           {displayData.map((stock, i) => (
             <TableRow 
               key={stock.ticker} 
               stock={stock} 
               onClick={onSelect} 
               darkMode={darkMode}
+              idx={i}
             />
           ))}
         </tbody>
@@ -663,7 +675,7 @@ function TableView({ data, onSelect, darkMode, showAll }) {
 }
 
 // ─── Table Row ────────────────────────────────────────────────────────────────
-function TableRow({ stock, onClick, darkMode }) {
+function TableRow({ stock, onClick, darkMode, idx }) {
   const up = upside(stock);
   const range = stock.scenario_analysis;
   const price = stock.inputs.price;
@@ -671,26 +683,43 @@ function TableRow({ stock, onClick, darkMode }) {
   return (
     <tr
       onClick={() => onClick(stock)}
-      className="cursor-pointer transition-all duration-200 hover:bg-slate-50 dark:hover:bg-[#161B22] group"
+      className="cursor-pointer transition-all duration-200 group border-b last:border-0"
+      style={{ 
+        background: 'var(--surface)',
+        borderColor: 'var(--chart-grid)'
+      }}
     >
       <td className="px-6 py-5">
-        <span className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-500 transition-colors uppercase leading-none">{stock.ticker}</span>
+        <span className="text-sm font-bold transition-colors uppercase leading-none"
+          style={{ color: darkMode ? '#F1F5F9' : '#0F172A' }}>
+          {stock.ticker}
+        </span>
       </td>
       <td className="px-6 py-5">
-        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight">
+        <span className="text-[10px] font-bold uppercase tracking-tight"
+          style={{ color: darkMode ? '#8B949E' : '#94A3B8' }}>
           {stock.inputs.sector}
         </span>
       </td>
-      <td className="px-6 py-5 font-bold text-[13px] text-slate-600 dark:text-slate-400">{money(price)}</td>
+      <td className="px-6 py-5 font-bold text-[13px]" 
+        style={{ color: darkMode ? '#C9D1D9' : '#475569' }}>
+        {money(price)}
+      </td>
       <td className="px-6 py-5 font-bold text-[13px] text-emerald-500 dark:text-[#22C55E]">{money(stock.valuation.intrinsic_value_per_share)}</td>
       <td className="px-6 py-5 font-bold text-[13px] text-emerald-500 dark:text-[#22C55E]">
         +{ (up * 100).toFixed(1)}%
       </td>
-      <td className="px-6 py-5 font-bold text-[13px] text-slate-600 dark:text-slate-400">
+      <td className="px-6 py-5 font-bold text-[13px]" 
+        style={{ color: 'var(--chart-text)' }}>
         {(stock.quality_metrics.fcf_yield * 100).toFixed(1)}%
       </td>
       <td className="px-6 py-5">
-        <span className="inline-block px-2.5 py-1 rounded-md bg-slate-100 dark:bg-[#1C2433] border border-slate-200 dark:border-[#2D3748] font-bold text-[10px] text-blue-600 dark:text-indigo-400">
+        <span className="inline-block px-2.5 py-1 rounded-md font-bold text-[10px] border"
+          style={{ 
+            background: darkMode ? '#1C2433' : '#F1F5F9',
+            color: darkMode ? '#818CF8' : '#2563EB',
+            borderColor: 'var(--chart-grid)'
+          }}>
           {(stock.score * 100).toFixed(0)}
         </span>
       </td>
@@ -798,11 +827,11 @@ function Modal({ stock, onClose, darkMode }) {
         })}
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3">
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3" style={{ background: darkMode ? 'rgba(30, 58, 138, 0.2)' : '#EFF6FF' }}>
             <p className="text-xs text-blue-400 dark:text-blue-500 mb-1">Crecimiento usado</p>
             <p className="text-sm font-bold text-blue-700 dark:text-blue-300">{pctFmt(stock.assumptions.growth_used)}</p>
           </div>
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3">
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3" style={{ background: darkMode ? 'rgba(30, 58, 138, 0.2)' : '#EFF6FF' }}>
             <p className="text-xs text-blue-400 dark:text-blue-500 mb-1">WACC</p>
             <p className="text-sm font-bold text-blue-700 dark:text-blue-300">{pctFmt(stock.assumptions.wacc)}</p>
           </div>
@@ -832,7 +861,13 @@ export default function App() {
   const [filterSector, setFilterSector]   = useState("All");
   const [search, setSearch]               = useState("");
   const [showAll, setShowAll]             = useState(false);
-  const [darkMode, setDarkMode]           = useState(true);
+  const [darkMode, setDarkMode]           = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem('darkMode');
+      return saved !== null ? saved === 'true' : true;
+    }
+    return true;
+  });
 
   useEffect(() => {
     if (darkMode) {
@@ -874,17 +909,21 @@ export default function App() {
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
 
       {/* ── HEADER ── */}
-      <header className="px-6 py-4 flex items-center justify-between border-b border-slate-200 dark:border-[#1F2937] bg-white dark:bg-[#0D1117]">
+      <header className="px-6 py-4 flex items-center justify-between border-b border-slate-200 dark:border-[#1F2937] transition-all duration-300"
+        style={{ background: darkMode ? '#06080C' : '#FFFFFF' }}>
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg">L</div>
-          <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100 uppercase tracking-tight">AlphaQuant Terminal</h1>
+          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">L</div>
+          <h1 className="text-lg font-bold uppercase tracking-tight"
+            style={{ color: darkMode ? '#F1F5F9' : '#0F172A' }}>
+            AlphaQuant Terminal
+          </h1>
         </div>
         
         <div className="flex items-center gap-6">
           <nav className="hidden md:flex items-center gap-6">
-            <a href="#" className="text-xs font-semibold text-blue-600 dark:text-blue-400">Dashboard</a>
-            <a href="#" className="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">Portfolio</a>
-            <a href="#" className="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">Alerts</a>
+            <a href="#" className="text-xs font-semibold" style={{ color: darkMode ? '#60A5FA' : '#2563EB' }}>Dashboard</a>
+            <a href="#" className="text-xs font-semibold hover:opacity-80 transition-opacity" style={{ color: darkMode ? '#94A3B8' : '#64748B' }}>Portfolio</a>
+            <a href="#" className="text-xs font-semibold hover:opacity-80 transition-opacity" style={{ color: darkMode ? '#94A3B8' : '#64748B' }}>Alerts</a>
           </nav>
           
           <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
@@ -908,7 +947,8 @@ export default function App() {
           { label: "Avg ROIC", value: pctFmt(avgRoic), color: "text-slate-200" },
           { label: "Avg Conviction", value: "High", color: "text-blue-400" },
         ].map((pill, i) => (
-          <div key={i} className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div key={i} className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm transition-colors"
+            style={{ background: darkMode ? '#1e293b' : '#fff' }}>
             <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{pill.label}</span>
             <span className={`text-sm font-bold ${pill.color}`}>{pill.value}</span>
           </div>
@@ -923,22 +963,28 @@ export default function App() {
         </div>
         
         {/* Top Conviction Picks */}
-        <div className="bg-white dark:bg-[#0D1117] rounded-2xl border border-slate-200 dark:border-[#1F2937] p-6 shadow-sm flex flex-col">
-          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6">Top Conviction Picks</h2>
+        <div className="rounded-2xl border p-6 shadow-sm flex flex-col transition-all duration-300"
+          style={{ 
+            background: 'var(--surface)',
+            borderColor: 'var(--border)'
+          }}>
+          <h2 className="text-lg font-bold mb-6" style={{ color: darkMode ? '#F1F5F9' : '#1E293B' }}>Top Conviction Picks</h2>
           
           <div className="space-y-4 flex-1">
             {data.slice(0, 3).map((stock, i) => {
               const up = upside(stock);
               return (
-                <div key={i} className="group p-4 rounded-xl bg-slate-50 dark:bg-[#161B22] border border-transparent dark:border-[#1B2129] hover:border-blue-500/50 transition-all cursor-pointer" onClick={() => setSelected(stock)}>
+                <div key={i} className="group p-4 rounded-xl bg-slate-50 dark:bg-[#161B22] border border-transparent dark:border-[#1B2129] hover:border-blue-500/50 transition-all cursor-pointer" 
+                  style={{ background: darkMode ? '#161B22' : '#F8FAFC' }}
+                  onClick={() => setSelected(stock)}>
                   <div className="flex justify-between items-start mb-1">
                     <div>
                       <span className="font-bold text-slate-900 dark:text-slate-100">{stock.ticker}</span>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-500 font-medium truncate w-32">{stock.inputs.sector}</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate w-32">{stock.inputs.sector}</p>
                     </div>
                     <div className="text-right">
                       <span className="text-xs font-bold text-emerald-500">+{ (up * 100).toFixed(1)}%</span>
-                      <p className="text-[9px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-wider">Bull Case</p>
+                      <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Bull Case</p>
                     </div>
                   </div>
                 </div>
@@ -960,10 +1006,17 @@ export default function App() {
 
       {/* ── MARKET COVERAGE ── */}
       <div className="max-w-7xl mx-auto px-6 pb-20">
-        <div className="bg-white dark:bg-[#0D1117] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden" 
-          style={{ background: darkMode ? '#0D1117' : '#fff' }}>
-          <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Market Coverage & Valuations</h2>
+        <div className="rounded-2xl border transition-all duration-300 shadow-sm overflow-hidden" 
+          style={{ 
+            background: 'var(--surface)',
+            borderColor: 'var(--border)'
+          }}>
+          <div className="px-6 py-5 border-b flex items-center justify-between"
+            style={{ borderColor: 'var(--chart-grid)' }}>
+            <h2 className="text-lg font-bold" 
+              style={{ color: darkMode ? '#F1F5F9' : '#1E293B' }}>
+              Market Coverage & Valuations
+            </h2>
             <div className="flex items-center gap-3">
               <div className="relative h-9">
                 <input
@@ -971,14 +1024,23 @@ export default function App() {
                   placeholder="Search ticker..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="pl-9 pr-4 h-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-500/50 text-slate-800 dark:text-slate-100 transition-colors"
+                  className="pl-9 pr-4 h-full rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-500/50 transition-colors border"
+                  style={{ 
+                    background: darkMode ? '#161B22' : '#F8FAFC',
+                    color: 'var(--chart-text)',
+                    borderColor: 'var(--border)'
+                  }}
                 />
                 <div className="absolute left-3 top-2.5 text-slate-500">
                   <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 </div>
               </div>
-              <button className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold rounded-lg uppercase tracking-wider border border-slate-200 dark:border-slate-700"
-                style={{ background: darkMode ? '#1F2937' : '#F1F5F9' }}>
+              <button className="px-4 py-2 text-[10px] font-bold rounded-lg uppercase tracking-wider border transition-colors"
+                style={{ 
+                  background: darkMode ? '#21262D' : '#F1F5F9',
+                  color: darkMode ? '#C9D1D9' : '#64748B',
+                  borderColor: darkMode ? '#30363D' : '#E2E8F0'
+                }}>
                 Export CSV
               </button>
               <button className="px-4 py-2 bg-blue-600 text-white text-[10px] font-bold rounded-lg uppercase tracking-wider border border-blue-700 shadow-sm shadow-blue-500/20">Add Ticker</button>
@@ -1095,7 +1157,10 @@ function StrategicMap({ data, darkMode }) {
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100">Mapa Estratégico (Radar)</h2>
+            <h2 className="text-lg font-bold" 
+              style={{ color: darkMode ? '#F1F5F9' : '#1E293B' }}>
+              Mapa Estratégico (Radar)
+            </h2>
             <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
               ROIC vs Margen de Seguridad • Tamaño = Score
             </p>
@@ -1105,7 +1170,7 @@ function StrategicMap({ data, darkMode }) {
             {Object.entries(categoryLabels).map(([key, label]) => (
               <div key={key} className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: categoryColors[key] }}></div>
-                <span className="text-gray-500 text-xs">{label}</span>
+                <span className="text-slate-500 dark:text-slate-400 text-xs font-semibold">{label}</span>
               </div>
             ))}
           </div>
@@ -1241,7 +1306,7 @@ function StrategicMap({ data, darkMode }) {
                   left: `${x}px`,
                   top: `${y - radius - 6}px`,
                   transform: 'translateX(-50%)',
-                  textShadow: darkMode ? '0 1px 2px rgba(0,0,0,0.8)' : '0 1px 2px rgba(255,255,255,0.9)',
+                  textShadow: darkMode ? '0 0 4px rgba(0,0,0,1)' : '0 1px 2px rgba(255,255,255,0.9)',
                   opacity: hoveredStock && hoveredStock !== point.ticker ? 0.4 : 1,
                   transition: 'opacity 0.2s'
                 }}
@@ -1400,7 +1465,10 @@ function ContextualFlags({ data, darkMode }) {
     <div className="max-w-7xl mx-auto px-6 py-8">
       <div className="mb-6">
         <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-widest mb-2">Inteligencia Contextual</p>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">Flags de Segundo Orden</h2>
+        <h2 className="text-xl font-bold"
+          style={{ color: darkMode ? '#F1F5F9' : '#1E293B' }}>
+          Flags de Segundo Orden
+        </h2>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1418,7 +1486,7 @@ function ContextualFlags({ data, darkMode }) {
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-xl">{flag.icon}</span>
-                <h3 className="font-bold text-gray-900 dark:text-slate-100">{flag.title}</h3>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100">{flag.title}</h3>
               </div>
               <span
                 className="text-xs font-bold px-2 py-1 rounded-full"
@@ -1444,9 +1512,9 @@ function ContextualFlags({ data, darkMode }) {
                     key={ticker}
                     className="text-xs font-medium px-2 py-1 rounded-md"
                     style={{
-                      backgroundColor: "rgba(255,255,255,0.6)",
-                      color: "#374151",
-                      border: "1px solid rgba(0,0,0,0.1)"
+                      backgroundColor: darkMode ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.6)",
+                      color: darkMode ? "#F1F5F9" : "#374151",
+                      border: darkMode ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)"
                     }}
                   >
                     {ticker}
