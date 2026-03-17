@@ -1,2 +1,23 @@
 @import "tailwindcss";
 
+@layer base {
+  body {
+    @apply transition-colors duration-300;
+  }
+}
+
+:root {
+  --app-bg: #F8FAFC;
+  --surface: #FFFFFF;
+  --border: #E5E7EB;
+  --chart-grid: #E5E7EB;
+  --chart-text: #6B7280;
+}
+
+.dark {
+  --app-bg: #06080C;
+  --surface: #0D1117;
+  --border: #1B2129;
+  --chart-grid: #21262D;
+  --chart-text: #8B949E;
+}

@@ -13,12 +13,12 @@ const upside = (d) => (d.valuation.intrinsic_value_per_share - d.inputs.price) /
 const billions = (n) => `$${(n / 1e9).toFixed(2)}B`;
 
 const SECTOR_TAGS = {
-  "Technology":             { bg:"#EFF6FF", text:"#1D4ED8" },
-  "Consumer Cyclical":      { bg:"#FFF7ED", text:"#C2410C" },
-  "Consumer Defensive":     { bg:"#F0FDF4", text:"#15803D" },
-  "Healthcare":             { bg:"#FDF4FF", text:"#7E22CE" },
-  "Industrials":            { bg:"#FFFBEB", text:"#B45309" },
-  "Communication Services": { bg:"#F0F9FF", text:"#0369A1" },
+  "Technology":             { bg:"#EFF6FF", bgDark: "#1e3a8a33", text:"#1D4ED8", textDark: "#60a5fa" },
+  "Consumer Cyclical":      { bg:"#FFF7ED", bgDark: "#7c2d1233", text:"#C2410C", textDark: "#fb923c" },
+  "Consumer Defensive":     { bg:"#F0FDF4", bgDark: "#064e3b33", text:"#15803D", textDark: "#4ade80" },
+  "Healthcare":             { bg:"#FDF4FF", bgDark: "#581c8733", text:"#7E22CE", textDark: "#c084fc" },
+  "Industrials":            { bg:"#FFFBEB", bgDark: "#78350f33", text:"#B45309", textDark: "#fbbf24" },
+  "Communication Services": { bg:"#F0F9FF", bgDark: "#0c4a6e33", text:"#0369A1", textDark: "#38bdf8" },
 };
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -26,9 +26,11 @@ const IconGrid     = () => <svg width="15" height="15" fill="none" stroke="curre
 const IconTable    = () => <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>;
 const IconAnalyze  = () => <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>;
 const IconSpinner  = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{animation:"spin 1s linear infinite"}}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>;
+const IconSun      = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.07" x2="5.64" y2="17.66"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>;
+const IconMoon     = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>;
 
 // ─── Scenario Asymmetry Chart ─────────────────────────────────────────────────────
-function ScenarioAsymmetryChart({ data }) {
+function ScenarioAsymmetryChart({ data, darkMode }) {
   const [hoveredStock, setHoveredStock] = useState(null);
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -67,7 +69,7 @@ function ScenarioAsymmetryChart({ data }) {
   const maxDistance = Math.max(
     ...chartData.map(d => Math.abs(d.bullUpside)),
     ...chartData.map(d => Math.abs(d.bearDownside)),
-    1
+    100 // minimum range to avoid division by zero or tiny ranges
   );
 
   const chartHeight = 320;
@@ -87,11 +89,11 @@ function ScenarioAsymmetryChart({ data }) {
   const zeroY = yScale(0);
 
   return (
-    <div className="bg-white rounded-2xl p-6 mt-6" style={{ border: "1px solid #E5E7EB" }}>
+    <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 mt-6 transition-colors" style={{ border: "1px solid var(--chart-grid)" }}>
       {/* Header */}
       <div className="mb-3">
-        <h3 className="text-lg font-bold text-gray-900">Asimetria de Escenarios</h3>
-        <p className="text-sm text-gray-500 mt-1">Perfil de riesgo/recompensa: Distancia desde precio actual</p>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">Asimetria de Escenarios</h3>
+        <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Perfil de riesgo/recompensa: Distancia desde precio actual</p>
       </div>
 
       {/* Chart */}
@@ -104,20 +106,33 @@ function ScenarioAsymmetryChart({ data }) {
                 y1={yScale(val)}
                 x2={chartWidth - padding.right}
                 y2={yScale(val)}
-                stroke="#E5E7EB"
-                strokeWidth={val === 0 ? 2 : 1}
-                strokeDasharray={val === 0 ? "" : "2,2"}
+                stroke={darkMode ? "#1F2937" : "#E5E7EB"}
+                strokeWidth={val === 0 ? 1.5 : 0.8}
+                strokeDasharray={val === 0 ? "" : "4,4"}
               />
               <text
                 x={padding.left - 10}
                 y={yScale(val) + 4}
                 textAnchor="end"
-                fill="#6B7280"
-                fontSize="10"
+                fill={darkMode ? "#4B5563" : "#9CA3AF"}
+                fontSize="9"
                 fontWeight={val === 0 ? 600 : 400}
               >
-                {val.toFixed(0)}
+                {val > 0 ? `+$${val}` : val < 0 ? `-$${Math.abs(val)}` : `$${val}`}
               </text>
+              {val === 0 && (
+                <text
+                  x={chartWidth - padding.right + 5}
+                  y={yScale(val) - 5}
+                  textAnchor="end"
+                  fill={darkMode ? "#4B5563" : "#9CA3AF"}
+                  fontSize="8"
+                  fontWeight="bold"
+                  className="uppercase tracking-widest"
+                >
+                  Precio Actual
+                </text>
+              )}
             </g>
           ))}
 
@@ -126,7 +141,7 @@ function ScenarioAsymmetryChart({ data }) {
             x={15}
             y={chartHeight / 2}
             textAnchor="middle"
-            fill="#9CA3AF"
+            fill="var(--chart-text)"
             fontSize="11"
             transform={`rotate(-90, 15, ${chartHeight / 2})`}
           >
@@ -181,19 +196,16 @@ function ScenarioAsymmetryChart({ data }) {
           })}
         </svg>
 
-        {/* X-axis labels */}
-        <div className="absolute bottom-0 left-0 right-0" style={{ height: `${padding.bottom}px` }}>
+        {/* Floating Labels below X-axis */}
+        <div className="absolute left-0 right-0" style={{ top: `${chartHeight - padding.bottom + 12}px` }}>
           {chartData.map((item, index) => {
-            const groupWidth = plotWidth / Math.max(chartData.length, 1);
-            const xCenter = padding.left + index * groupWidth + groupWidth / 2;
+            const x = padding.left + index * (plotWidth / Math.max(chartData.length, 1)) + (plotWidth / Math.max(chartData.length, 1) / 2);
             return (
               <div
                 key={`label-${item.ticker}`}
-                className="text-xs text-gray-600 text-center absolute"
+                className="absolute text-[10px] font-bold text-slate-500 dark:text-slate-400"
                 style={{
-                  left: `${xCenter}px`,
-                  bottom: '6px',
-                  width: `${groupWidth}px`,
+                  left: `${x}px`,
                   transform: 'translateX(-50%) rotate(-45deg)',
                   transformOrigin: 'top center',
                   whiteSpace: 'nowrap',
@@ -217,7 +229,7 @@ function ScenarioAsymmetryChart({ data }) {
 
           return (
             <div
-              className="absolute bg-gray-900 text-white p-2 rounded-lg shadow-lg z-20 pointer-events-none text-xs"
+              className={`absolute p-2 rounded-lg shadow-lg z-20 pointer-events-none text-xs border ${darkMode ? "bg-slate-900 text-slate-100 border-slate-700" : "bg-gray-900 text-white border-transparent"}`}
               style={{
                 left: `${x + 10}px`,
                 top: '16px',
@@ -233,14 +245,14 @@ function ScenarioAsymmetryChart({ data }) {
       </div>
 
       {/* Legend */}
-      <div className="flex justify-center items-center gap-6 mt-4">
+      <div className="flex justify-center items-center gap-6 mt-8">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#22C55E' }}></div>
-          <span className="text-xs text-gray-600">Bull Upside</span>
+          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#22C55E' }}></div>
+          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Bull Upside</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#EF4444' }}></div>
-          <span className="text-xs text-gray-600">Bear Downside</span>
+          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#EF4444' }}></div>
+          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Bear Downside</span>
         </div>
       </div>
     </div>
@@ -487,12 +499,12 @@ async function fetchAnalysis(ticker) {
 }
 
 // ─── ScoreRing ────────────────────────────────────────────────────────────────
-function ScoreRing({ score }) {
+function ScoreRing({ score, darkMode }) {
   const r = 19, circ = 2 * Math.PI * r;
   const color = score >= 0.75 ? "#0EA5E9" : score >= 0.6 ? "#F59E0B" : "#EF4444";
   return (
     <svg width="48" height="48" viewBox="0 0 48 48">
-      <circle cx="24" cy="24" r={r} fill="none" stroke="#E2E8F0" strokeWidth="4"/>
+      <circle cx="24" cy="24" r={r} fill="none" stroke={darkMode ? "#334155" : "#E2E8F0"} strokeWidth="4"/>
       <circle
         cx="24"
         cy="24"
@@ -512,98 +524,84 @@ function ScoreRing({ score }) {
 }
 
 // ─── ScenarioTrack ────────────────────────────────────────────────────────────
-function ScenarioTrack({ stock, compact = false }) {
-  const { intrinsic_low, intrinsic_mid, intrinsic_high } = stock.scenario_analysis;
+function ScenarioTrack({ stock, compact = false, darkMode }) {
+  const isDark = darkMode;
   const price = stock.inputs.price;
-  const min = Math.min(intrinsic_low, price) * 0.92;
-  const max = Math.max(intrinsic_high, price) * 1.05;
-  const toP = (v) => `${((v - min) / (max - min) * 100).toFixed(1)}%`;
+  const { bear_value, intrinsic_value_per_share: base, bull_value } = stock.valuation;
+  const minV = Math.min(price, bear_value, base, bull_value);
+  const maxV = Math.max(price, bear_value, base, bull_value);
+  const range = maxV - minV || 1;
+  const pct = (v) => ((v - minV) / range) * 100;
 
   if (compact) {
     return (
-      <div className="min-w-[200px]">
-        <div className="flex justify-between text-[10px] text-slate-500 mb-0.5">
-          <span>Bear</span><span>Base</span><span>Bull</span>
-        </div>
-        <div className="relative h-4">
-          <div className="absolute top-1.5 left-0 right-0 h-1 rounded-full bg-slate-200" />
-          <div
-            className="absolute top-1.5 h-1 rounded-full"
-            style={{
-              left: toP(intrinsic_low),
-              width: `${((intrinsic_high - intrinsic_low) / (max - min) * 100).toFixed(1)}%`,
-              background: "linear-gradient(90deg,#F43F5E,#3B82F6,#10B981)"
-            }}
-          />
-          <div className="absolute top-0.5 w-0.5 h-3 rounded-full bg-slate-600" style={{ left: toP(price), transform:"translateX(-50%)" }}/>
-        </div>
-        <div className="flex justify-between text-[11px] mt-0.5 font-semibold text-slate-700">
-          <span>{money(intrinsic_low)}</span>
-          <span>{money(intrinsic_mid)}</span>
-          <span>{money(intrinsic_high)}</span>
-        </div>
+      <div className="relative h-4 w-full flex items-center">
+        <div className="h-0.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full" />
+        <div className="absolute h-0.5 bg-blue-500/50 rounded-full" style={{ left: `${pct(bear_value)}%`, width: `${pct(bull_value) - pct(bear_value)}%` }} />
+        <div className="absolute w-1.5 h-1.5 rounded-full bg-rose-400 border border-white dark:border-slate-900" style={{ left: `${pct(bear_value)}%`, transform: 'translateX(-50%)' }} />
+        <div className="absolute w-1.5 h-1.5 rounded-full bg-white border border-blue-500" style={{ left: `${pct(base)}%`, transform: 'translateX(-50%)' }} />
+        <div className="absolute w-1.5 h-1.5 rounded-full bg-emerald-400 border border-white dark:border-slate-900" style={{ left: `${pct(bull_value)}%`, transform: 'translateX(-50%)' }} />
       </div>
     );
   }
 
   return (
-    <div className="mt-4">
-      <div className="flex justify-between text-[11px] text-slate-400 mb-1">
-        <span>Escenarios</span><span>Bear · Base · Bull</span>
+    <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/50">
+      <div className="flex justify-between text-[10px] text-slate-400 dark:text-slate-500 mb-1.5 uppercase font-bold tracking-widest">
+        <span>Bear</span>
+        <span>Base</span>
+        <span>Bull</span>
       </div>
-      <div className="relative h-6">
-        <div className="absolute top-3 left-0 right-0 h-1.5 rounded-full bg-slate-100" />
-        <div
-          className="absolute top-3 h-1.5 rounded-full border border-sky-100"
-          style={{
-            left: toP(intrinsic_low),
-            width: `${((intrinsic_high - intrinsic_low) / (max - min) * 100).toFixed(1)}%`,
-            background: "linear-gradient(90deg,#F43F5E,#3B82F6,#10B981)"
-          }}
-        />
-        <div className="absolute top-1.5 w-1 h-4 rounded-sm bg-rose-500"  style={{ left: toP(intrinsic_low),  transform:"translateX(-50%)" }}/>
-        <div className="absolute top-1.5 w-1 h-4 rounded-sm bg-sky-500"   style={{ left: toP(intrinsic_mid),  transform:"translateX(-50%)" }}/>
-        <div className="absolute top-1.5 w-1 h-4 rounded-sm bg-emerald-500"style={{ left: toP(intrinsic_high), transform:"translateX(-50%)" }}/>
-        <div className="absolute top-1 w-0.5 h-5 rounded-full bg-slate-700" style={{ left: toP(price), transform:"translateX(-50%)" }}/>
+      <div className="relative h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+        <div className="absolute top-0 h-full bg-red-400" style={{ left: `${pct(Math.min(bear_value, base))}%`, width: `${pct(Math.max(bear_value, base)) - pct(Math.min(bear_value, base))}%` }}/>
+        <div className="absolute top-0 h-full bg-blue-500" style={{ left: `${pct(Math.min(base, bull_value))}%`, width: `${pct(Math.max(base, bull_value)) - pct(Math.min(base, bull_value))}%` }}/>
       </div>
-      <div className="flex justify-between text-[12px] mt-1 font-semibold">
-        <span className="text-rose-500">{money(intrinsic_low)}</span>
-        <span className="text-sky-600">{money(intrinsic_mid)}</span>
-        <span className="text-emerald-600">{money(intrinsic_high)}</span>
+      <div className="relative h-4 mt-1">
+        <div className="absolute top-0 w-0.5 h-3 bg-slate-800 dark:bg-slate-200" style={{ left: `${pct(price)}%`, transform: 'translateX(-50%)' }}>
+          <div className="absolute -top-1 left-1.5 text-[9px] font-bold text-slate-800 dark:text-slate-200">${price.toFixed(0)}</div>
+        </div>
       </div>
     </div>
   );
 }
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
-function Card({ stock, onClick }) {
+function Card({ stock, onClick, darkMode }) {
   const up  = upside(stock);
   const tag = SECTOR_TAGS[stock.inputs.sector] || { bg:"#F3F4F6", text:"#374151" };
+  const isDark = darkMode;
+
   return (
     <div onClick={() => onClick(stock)}
-      className="bg-white rounded-2xl p-5 cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
-      style={{ border:"1px solid #E5E7EB" }}>
+      className="bg-white dark:bg-slate-800 rounded-2xl p-5 cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border border-slate-200 dark:border-slate-700">
       <div className="flex justify-between items-start">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-slate-900">{stock.ticker}</span>
+            <span className="text-xl font-bold text-slate-900 dark:text-slate-100">{stock.ticker}</span>
             {stock.assumptions.growth_regime === "HYPER_GROWTH" && (
-              <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 border border-amber-200">HG</span>
+              <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50">HG</span>
             )}
           </div>
-          <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background:tag.bg, color:tag.text }}>{stock.inputs.sector}</span>
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full transition-colors" 
+            style={{ 
+              background: isDark ? (tag.bgDark || tag.bg) : tag.bg, 
+              color: isDark ? (tag.textDark || tag.text) : tag.text 
+            }}>
+            {stock.inputs.sector}
+          </span>
         </div>
-        <ScoreRing score={stock.score}/>
+        <ScoreRing score={stock.score} darkMode={darkMode}/>
       </div>
 
       <div className="grid grid-cols-2 gap-3 mt-4">
-        <div className="rounded-xl p-3 border border-slate-100 bg-slate-50">
-          <p className="text-xs text-slate-400 mb-1">Precio</p>
-          <p className="text-base font-semibold text-slate-900">{money(stock.inputs.price)}</p>
+        <div className="bg-slate-50 dark:bg-slate-800/80 rounded-xl p-3 border border-slate-100 dark:border-slate-700/50">
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">Precio</p>
+          <p className="text-base font-semibold text-slate-900 dark:text-slate-100">{money(stock.inputs.price)}</p>
         </div>
-        <div className="rounded-xl p-3 border border-sky-100" style={{ background: up > 0 ? "#F0F9FF" : "#FFF1F2" }}>
-          <p className="text-xs mb-1" style={{ color: up > 0 ? "#0EA5E9" : "#EF4444" }}>Valor intrínseco</p>
-          <p className="text-base font-semibold" style={{ color: up > 0 ? "#0F172A" : "#B91C1C" }}>
+        <div className="rounded-xl p-3 border border-sky-100 dark:border-sky-900/50" 
+          style={{ background: up > 0 ? (isDark ? "rgb(12 74 110 / 0.2)" : "#F0F9FF") : (isDark ? "rgb(127 29 29 / 0.2)" : "#FFF1F2") }}>
+          <p className="text-xs mb-1" style={{ color: up > 0 ? (darkMode ? "#34d399" : "#0EA5E9") : (darkMode ? "#f87171" : "#EF4444") }}>Valor intrínseco</p>
+          <p className="text-base font-semibold" style={{ color: up > 0 ? (isDark ? "#7dd3fc" : "#0F172A") : (isDark ? "#fca5a5" : "#B91C1C") }}>
             {money(stock.valuation.intrinsic_value_per_share)}
           </p>
         </div>
@@ -617,146 +615,96 @@ function Card({ stock, onClick }) {
           </span>
         </div>
         <div className="text-xs text-slate-500">
-          ROIC <span className="font-semibold text-slate-700">{pctFmt(stock.quality_metrics.roic)}</span>
+          ROIC <span className="font-semibold text-slate-700 dark:text-slate-400">{pctFmt(stock.quality_metrics.roic)}</span>
         </div>
       </div>
 
-      <div className="h-1.5 rounded-full bg-slate-100 mb-3">
+      <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 mb-3">
         <div className="h-1.5 rounded-full" style={{ width:`${Math.min(stock.quality_metrics.roic*200,100)}%`, background:"linear-gradient(90deg,#F472B6,#A78BFA,#38BDF8)" }}/>
       </div>
 
-      <ScenarioTrack stock={stock}/>
+      <ScenarioTrack stock={stock} darkMode={darkMode}/>
     </div>
   );
 }
 
 // ─── Table View Component (with truncation) ───────────────────────────────────
-function TableView({ data, onSelect }) {
-  const [showAll, setShowAll] = useState(false);
+function TableView({ data, onSelect, darkMode, showAll }) {
   const displayData = showAll ? data : data.slice(0, 5);
-  const hasMore = data.length > 5;
-  
-  // Column background colors (Intrínseco = blue, Upside = green)
-  const colBgColors = [
-    null,           // Ticker
-    null,           // Sector  
-    null,           // Precio
-    '#EFF6FF',      // Intrínseco - blue light
-    '#F0FDF4',      // Upside - green light
-    null,           // FCF Yield
-    null,           // Score
-    null,           // Escenarios
-  ];
   
   return (
-    <div className="max-w-7xl mx-auto px-6 py-6">
-      <div className="bg-white rounded-2xl overflow-hidden" style={{ border:"1px solid #E5E7EB" }}>
-        <table className="w-full">
-          <thead>
-            <tr>
-              {["Ticker","Sector","Precio","Intrínseco","Upside","FCF Yield","Score","Escenarios"].map((h, i) => (
-                <th
-                  key={h}
-                  className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide"
-                  style={{ 
-                    color:"#64748B", 
-                    background: colBgColors[i] || '#F8FAFC',
-                    borderBottom:"1px solid #E2E8F0"
-                  }}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {displayData.map((stock, i) => (
-              <TableRow 
-                key={stock.ticker} 
-                stock={stock} 
-                onClick={onSelect} 
-                idx={i}
-                colBgColors={colBgColors}
-              />
+    <div className="w-full">
+      <table className="w-full text-left">
+        <thead>
+          <tr className="border-b border-slate-100 dark:border-[#1F2937]">
+            {["Ticker","Sector","Price","Intrinsic","Upside%","FCF Yield","Score","Scenario Range"].map((h) => (
+              <th
+                key={h}
+                className="px-6 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-transparent"
+              >
+                {h}
+              </th>
             ))}
-          </tbody>
-        </table>
-        
-        {/* Show More Button */}
-        {hasMore && (
-          <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex justify-center">
-            <button
-              onClick={() => setShowAll(!showAll)}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1.5 px-4 py-2 rounded-lg hover:bg-blue-50"
-            >
-              {showAll ? (
-                <>Ver menos <span className="text-lg leading-none">▲</span></>
-              ) : (
-                <>Ver todos ({data.length} stocks) <span className="text-lg leading-none">▼</span></>
-              )}
-            </button>
-          </div>
-        )}
-      </div>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-50 dark:divide-[#1B2129]">
+          {displayData.map((stock, i) => (
+            <TableRow 
+              key={stock.ticker} 
+              stock={stock} 
+              onClick={onSelect} 
+              darkMode={darkMode}
+            />
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
 // ─── Table Row ────────────────────────────────────────────────────────────────
-function TableRow({ stock, onClick, idx, colBgColors = [] }) {
-  const up  = upside(stock);
-  const tag = SECTOR_TAGS[stock.inputs.sector] || { bg:"#F3F4F6", text:"#374151" };
-  
-  const cellBgs = colBgColors.map(bg => bg ? { background: bg } : {});
+function TableRow({ stock, onClick, darkMode }) {
+  const up = upside(stock);
+  const range = stock.scenario_analysis;
+  const price = stock.inputs.price;
   
   return (
     <tr
       onClick={() => onClick(stock)}
-      className="cursor-pointer transition-colors hover:bg-sky-50"
-      style={{ background: idx % 2 === 0 ? "#fff" : "#F8FAFC", borderBottom:"1px solid #E2E8F0" }}>
-      <td className="px-4 py-3" style={cellBgs[0]}>
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-slate-900">{stock.ticker}</span>
-          {stock.assumptions.growth_regime === "HYPER_GROWTH" && (
-            <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 border border-amber-200">HG</span>
-          )}
-        </div>
+      className="cursor-pointer transition-all duration-200 hover:bg-slate-50 dark:hover:bg-[#161B22] group"
+    >
+      <td className="px-6 py-5">
+        <span className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-500 transition-colors uppercase leading-none">{stock.ticker}</span>
       </td>
-      <td className="px-4 py-3" style={cellBgs[1]}>
-        <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background:tag.bg, color:tag.text }}>
+      <td className="px-6 py-5">
+        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight">
           {stock.inputs.sector}
         </span>
       </td>
-      <td className="px-4 py-3 font-semibold text-slate-800" style={cellBgs[2]}>{money(stock.inputs.price)}</td>
-      <td className="px-4 py-3 font-semibold" style={{ ...cellBgs[3], color: up > 0 ? "#0EA5E9" : "#DC2626" }}>
-        {money(stock.valuation.intrinsic_value_per_share)}
+      <td className="px-6 py-5 font-bold text-[13px] text-slate-600 dark:text-slate-400">{money(price)}</td>
+      <td className="px-6 py-5 font-bold text-[13px] text-emerald-500 dark:text-[#22C55E]">{money(stock.valuation.intrinsic_value_per_share)}</td>
+      <td className="px-6 py-5 font-bold text-[13px] text-emerald-500 dark:text-[#22C55E]">
+        +{ (up * 100).toFixed(1)}%
       </td>
-      <td className="px-4 py-3" style={cellBgs[4]}>
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-slate-400">Δ</span>
-          <span className="font-semibold text-sm" style={{ color: up > 0 ? "#0F9F6E" : "#B91C1C" }}>
-            {up > 0 ? "+" : ""}{(up * 100).toFixed(1)}%
-          </span>
-        </div>
+      <td className="px-6 py-5 font-bold text-[13px] text-slate-600 dark:text-slate-400">
+        {(stock.quality_metrics.fcf_yield * 100).toFixed(1)}%
       </td>
-      <td className="px-4 py-3 font-semibold text-slate-700" style={cellBgs[5]}>
-        {pctFmt(stock.quality_metrics.fcf_yield)}
-      </td>
-      <td className="px-4 py-3" style={cellBgs[6]}>
-        <span
-          className="font-bold text-sm"
-          style={{ color: stock.score >= 0.75 ? "#0EA5E9" : stock.score >= 0.6 ? "#F59E0B" : "#EF4444" }}>
-          {(stock.score * 10).toFixed(1)}
+      <td className="px-6 py-5">
+        <span className="inline-block px-2.5 py-1 rounded-md bg-slate-100 dark:bg-[#1C2433] border border-slate-200 dark:border-[#2D3748] font-bold text-[10px] text-blue-600 dark:text-indigo-400">
+          {(stock.score * 100).toFixed(0)}
         </span>
       </td>
-      <td className="px-4 py-3 align-top" style={cellBgs[7]}>
-        <ScenarioTrack stock={stock} compact />
+      <td className="px-6 py-5">
+        <div className="w-24">
+          <ScenarioTrack stock={stock} compact darkMode={darkMode} />
+        </div>
       </td>
     </tr>
   );
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
-function Modal({ stock, onClose }) {
+function Modal({ stock, onClose, darkMode }) {
   const [loading, setLoading] = useState(false);
 
   if (!stock) return null;
@@ -775,52 +723,59 @@ function Modal({ stock, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background:"rgba(15,23,42,0.35)", backdropFilter:"blur(4px)" }}
+      style={{ background:"rgba(15,23,42,0.45)", backdropFilter:"blur(8px)" }}
       onClick={onClose}>
-      <div className="bg-white rounded-3xl p-7 w-full max-w-md shadow-2xl"
-        style={{ border:"1px solid #E5E7EB" }}
+      <div className="bg-white dark:bg-[#0D1117] rounded-3xl p-7 w-full max-w-md shadow-2xl transition-colors border border-slate-200 dark:border-slate-800"
+        style={{ background: darkMode ? '#0D1117' : '#fff' }}
         onClick={e => e.stopPropagation()}>
 
         <div className="flex justify-between items-start mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
-              <h2 className="text-2xl font-bold text-gray-900">{stock.ticker}</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100">{stock.ticker}</h2>
               {stock.assumptions.growth_regime === "HYPER_GROWTH" && (
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-600 border border-amber-200">HYPER GROWTH</span>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50">HYPER GROWTH</span>
               )}
             </div>
-            <span className="text-sm font-medium px-2.5 py-1 rounded-full" style={{ background:tag.bg, color:tag.text }}>{stock.inputs.sector}</span>
+            <span className="text-sm font-medium px-2.5 py-1 rounded-full" 
+              style={{ 
+                background: darkMode ? (tag.bgDark || tag.bg) : tag.bg, 
+                color: darkMode ? (tag.textDark || tag.text) : tag.text 
+              }}>
+              {stock.inputs.sector}
+            </span>
           </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 text-lg">×</button>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-500 dark:text-slate-400 text-lg transition-colors">×</button>
         </div>
 
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
-            { label:"Precio",           value:money(stock.inputs.price),                               color:"#374151" },
-            { label:"Valor Intrínseco", value:money(stock.valuation.intrinsic_value_per_share),        color: up>0?"#1D4ED8":"#DC2626" },
-            { label:"Upside",           value:`${up>0?"+":""}${(up*100).toFixed(1)}%`,                 color: up>0?"#15803D":"#DC2626" },
-            { label:"ROIC",             value:pctFmt(stock.quality_metrics.roic),                      color:"#374151" },
-            { label:"FCF Yield",        value:pctFmt(stock.quality_metrics.fcf_yield),                 color:"#374151" },
-            { label:"Score",            value:`${(stock.score*10).toFixed(2)}/10`,                     color:"#1D4ED8" },
+            { label:"Precio",           value:money(stock.inputs.price),                               color: darkMode ? "#94A3B8" : "#374151" },
+            { label:"Valor Intrínseco", value:money(stock.valuation.intrinsic_value_per_share),        color: up>0 ? (darkMode ? "#38bdf8" : "#1D4ED8") : (darkMode ? "#f87171" : "#DC2626") },
+            { label:"Upside",           value:`${up>0?"+":""}${(up*100).toFixed(1)}%`,                 color: up>0 ? (darkMode ? "#4ade80" : "#15803D") : (darkMode ? "#f87171" : "#DC2626") },
+            { label:"ROIC",             value:pctFmt(stock.quality_metrics.roic),                      color: darkMode ? "#94A3B8" : "#374151" },
+            { label:"FCF Yield",        value:pctFmt(stock.quality_metrics.fcf_yield),                 color: darkMode ? "#94A3B8" : "#374151" },
+            { label:"Score",            value:`${(stock.score*10).toFixed(2)}/10`,                     color: darkMode ? "#38bdf8" : "#1D4ED8" },
           ].map(({ label, value, color }) => (
-            <div key={label} className="bg-gray-50 rounded-xl p-3 text-center">
-              <p className="text-xs text-gray-400 mb-1">{label}</p>
+            <div key={label} className="bg-slate-50 dark:bg-[#161B22] rounded-xl p-3 text-center border border-slate-100 dark:border-slate-800" 
+              style={{ background: darkMode ? '#161B22' : '#F8FAFC' }}>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">{label}</p>
               <p className="text-sm font-bold" style={{ color }}>{value}</p>
             </div>
           ))}
         </div>
 
-        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100 mb-3">
-          <span className="text-xs text-gray-500 w-24 shrink-0">💰 Precio hoy</span>
-          <div className="flex-1 h-2 rounded-full bg-gray-100">
-            <div className="h-2 rounded-full bg-gray-400"
+        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50 mb-3">
+          <span className="text-xs text-slate-500 dark:text-slate-400 w-24 shrink-0">💰 Precio hoy</span>
+          <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-700">
+            <div className="h-2 rounded-full bg-slate-400 dark:bg-slate-500"
               style={{ width:`${Math.min((stock.inputs.price/stock.scenario_analysis.intrinsic_high)*100,100)}%` }}/>
           </div>
-          <span className="text-xs font-bold w-16 text-right text-gray-600">{money(stock.inputs.price)}</span>
-          <span className="text-xs w-14 text-right text-gray-400">—</span>
+          <span className="text-xs font-bold w-16 text-right text-slate-600 dark:text-slate-200">{money(stock.inputs.price)}</span>
+          <span className="text-xs w-14 text-right text-slate-400 dark:text-slate-500">—</span>
         </div>
 
-        <p className="text-sm font-semibold text-gray-700 mb-3">Análisis de Escenarios</p>
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-100 mb-3">Análisis de Escenarios</p>
         {[
           { label:"🐻 Pesimista", value:stock.scenario_analysis.intrinsic_low,  color:"#EF4444" },
           { label:"📊 Base",      value:stock.scenario_analysis.intrinsic_mid,  color:"#1D4ED8" },
@@ -830,12 +785,12 @@ function Modal({ stock, onClose }) {
           const su = ((value - stock.inputs.price) / stock.inputs.price * 100).toFixed(1);
           return (
             <div key={label} className="flex items-center gap-3 mb-2">
-              <span className="text-xs text-gray-500 w-24 shrink-0">{label}</span>
-              <div className="flex-1 h-2 rounded-full bg-gray-100">
+              <span className="text-xs text-slate-500 dark:text-slate-400 w-24 shrink-0">{label}</span>
+              <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-700">
                 <div className="h-2 rounded-full" style={{ width:`${w}%`, background:color, opacity:0.65 }}/>
               </div>
               <span className="text-xs font-bold w-16 text-right" style={{ color }}>{money(value)}</span>
-              <span className="text-xs w-14 text-right" style={{ color: value > stock.inputs.price ? "#15803D" : "#DC2626" }}>
+              <span className="text-xs w-14 text-right" style={{ color: value > stock.inputs.price ? (darkMode ? "#4ade80" : "#15803D") : (darkMode ? "#fca5a5" : "#DC2626") }}>
                 {su > 0 ? "+" : ""}{su}%
               </span>
             </div>
@@ -843,13 +798,13 @@ function Modal({ stock, onClose }) {
         })}
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-blue-50 rounded-xl p-3">
-            <p className="text-xs text-blue-400 mb-1">Crecimiento usado</p>
-            <p className="text-sm font-bold text-blue-700">{pctFmt(stock.assumptions.growth_used)}</p>
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3">
+            <p className="text-xs text-blue-400 dark:text-blue-500 mb-1">Crecimiento usado</p>
+            <p className="text-sm font-bold text-blue-700 dark:text-blue-300">{pctFmt(stock.assumptions.growth_used)}</p>
           </div>
-          <div className="bg-blue-50 rounded-xl p-3">
-            <p className="text-xs text-blue-400 mb-1">WACC</p>
-            <p className="text-sm font-bold text-blue-700">{pctFmt(stock.assumptions.wacc)}</p>
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3">
+            <p className="text-xs text-blue-400 dark:text-blue-500 mb-1">WACC</p>
+            <p className="text-sm font-bold text-blue-700 dark:text-blue-300">{pctFmt(stock.assumptions.wacc)}</p>
           </div>
         </div>
 
@@ -876,6 +831,17 @@ export default function App() {
   const [filterValuation, setFilterVal]   = useState("All");
   const [filterSector, setFilterSector]   = useState("All");
   const [search, setSearch]               = useState("");
+  const [showAll, setShowAll]             = useState(false);
+  const [darkMode, setDarkMode]           = useState(true);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('darkMode', darkMode);
+  }, [darkMode]);
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
@@ -904,175 +870,150 @@ export default function App() {
   const avgRoic = raw.reduce((s, d) => s + d.quality_metrics.roic, 0) / raw.length;
 
   return (
-    <div className="min-h-screen" style={{ background:"#F8FAFC", fontFamily:"'Inter',system-ui,sans-serif" }}>
+    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark bg-[#06080C] text-slate-100' : 'bg-slate-50 text-slate-900'}`} style={{ fontFamily:"'Inter',system-ui,sans-serif" }}>
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
 
-      {/* ── TOP BAR: título arriba, KPI cards en fila debajo ── */}
-      <div className="bg-white border-b border-slate-200 px-6 py-5">
-        <div className="max-w-7xl mx-auto">
-          {/* Título y subtítulo */}
-          <div className="mb-4">
-            <h1 className="text-xl font-bold text-slate-800">Stock Valuation Analysis</h1>
-            <p className="text-sm text-slate-500 font-normal mt-1">Analyzing {raw.length} stocks across multiple sectors.</p>
-          </div>
+      {/* ── HEADER ── */}
+      <header className="px-6 py-4 flex items-center justify-between border-b border-slate-200 dark:border-[#1F2937] bg-white dark:bg-[#0D1117]">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg">L</div>
+          <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100 uppercase tracking-tight">AlphaQuant Terminal</h1>
+        </div>
+        
+        <div className="flex items-center gap-6">
+          <nav className="hidden md:flex items-center gap-6">
+            <a href="#" className="text-xs font-semibold text-blue-600 dark:text-blue-400">Dashboard</a>
+            <a href="#" className="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">Portfolio</a>
+            <a href="#" className="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">Alerts</a>
+          </nav>
+          
+          <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
+          
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
+            {darkMode ? <IconSun /> : <IconMoon />}
+          </button>
+          
+          <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-600 dark:text-slate-300">JD</div>
+        </div>
+      </header>
 
-          {/* KPI Cards - Full Width */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {/* Total Stocks - Blue/Purple */}
-            <div className="flex items-center bg-slate-50 rounded-lg overflow-hidden" style={{ border: "1px solid #E2E8F0" }}>
-              <div className="w-1 h-full bg-gradient-to-b from-blue-500 to-purple-500"></div>
-              <div className="px-4 py-3 flex-1">
-                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">Total Stocks</p>
-                <p className="text-xl font-bold text-slate-800">{raw.length}</p>
-              </div>
+      {/* ── KPI PILLS ── */}
+      <div className="max-w-7xl mx-auto px-6 py-6 flex flex-wrap gap-4">
+        {[
+          { label: "Total Stocks", value: raw.length, color: "text-slate-400" },
+          { label: "Avg MOS", value: pctFmt(raw.reduce((s, d) => s + d.valuation.margin_of_safety, 0) / raw.length), color: "text-emerald-500" },
+          { label: "Avg ROIC", value: pctFmt(avgRoic), color: "text-slate-200" },
+          { label: "Avg Conviction", value: "High", color: "text-blue-400" },
+        ].map((pill, i) => (
+          <div key={i} className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{pill.label}</span>
+            <span className={`text-sm font-bold ${pill.color}`}>{pill.value}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* ── TOP SECTION ── */}
+      <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Scenario Asymmetry Chart */}
+        <div className="lg:col-span-2">
+          <ScenarioAsymmetryChart data={data} darkMode={darkMode} />
+        </div>
+        
+        {/* Top Conviction Picks */}
+        <div className="bg-white dark:bg-[#0D1117] rounded-2xl border border-slate-200 dark:border-[#1F2937] p-6 shadow-sm flex flex-col">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6">Top Conviction Picks</h2>
+          
+          <div className="space-y-4 flex-1">
+            {data.slice(0, 3).map((stock, i) => {
+              const up = upside(stock);
+              return (
+                <div key={i} className="group p-4 rounded-xl bg-slate-50 dark:bg-[#161B22] border border-transparent dark:border-[#1B2129] hover:border-blue-500/50 transition-all cursor-pointer" onClick={() => setSelected(stock)}>
+                  <div className="flex justify-between items-start mb-1">
+                    <div>
+                      <span className="font-bold text-slate-900 dark:text-slate-100">{stock.ticker}</span>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-500 font-medium truncate w-32">{stock.inputs.sector}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-emerald-500">+{ (up * 100).toFixed(1)}%</span>
+                      <p className="text-[9px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-wider">Bull Case</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          <div className="mt-8 pt-6 border-t border-slate-100 dark:border-[#1F2937]">
+            <div className="flex justify-between text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
+              <span>Portfolio Diversification</span>
+              <span>82% Target met</span>
             </div>
-            
-            {/* MOS Promedio - Green */}
-            <div className="flex items-center bg-slate-50 rounded-lg overflow-hidden" style={{ border: "1px solid #E2E8F0" }}>
-              <div className="w-1 h-full bg-emerald-500"></div>
-              <div className="px-4 py-3 flex-1">
-                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">MOS Promedio</p>
-                <p className="text-xl font-bold text-slate-800">{pctFmt(raw.reduce((s, d) => s + d.valuation.margin_of_safety, 0) / raw.length)}</p>
-              </div>
-            </div>
-            
-            {/* ROIC Promedio - Green */}
-            <div className="flex items-center bg-slate-50 rounded-lg overflow-hidden" style={{ border: "1px solid #E2E8F0" }}>
-              <div className="w-1 h-full bg-emerald-500"></div>
-              <div className="px-4 py-3 flex-1">
-                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">ROIC Promedio</p>
-                <p className="text-xl font-bold text-slate-800">{pctFmt(avgRoic)}</p>
-              </div>
-            </div>
-            
-            {/* Convicción Prom. - Orange/Amber */}
-            <div className="flex items-center bg-slate-50 rounded-lg overflow-hidden" style={{ border: "1px solid #E2E8F0" }}>
-              <div className="w-1 h-full bg-amber-500"></div>
-              <div className="px-4 py-3 flex-1">
-                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">Convicción Prom.</p>
-                <p className="text-xl font-bold text-slate-800">{(raw.reduce((s, d) => s + d.score, 0) / raw.length * 100).toFixed(0)}%</p>
-              </div>
+            <div className="h-1.5 w-full bg-slate-100 dark:bg-[#1F2937] rounded-full overflow-hidden">
+              <div className="h-full bg-blue-600 rounded-full" style={{ width: "82%" }}></div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── FILTERS ── */}
-      <div className="bg-white border-b border-gray-100 px-6 py-3">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-3">
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar ticker..."
-              className="pl-8 pr-3 py-1.5 text-sm rounded-lg outline-none focus:ring-2 focus:ring-blue-200"
-              style={{ border:"1px solid #E5E7EB", width:150 }}/>
-          </div>
-
-          <div className="relative flex items-center gap-1 bg-gray-50 rounded-lg p-1" style={{ border:"1px solid #E2E7EB" }}>
-            <span className="text-xs text-gray-400 px-2">Ordenar:</span>
-            {[{ k:"score",l:"Score" },{ k:"upside",l:"Upside" }].map(({ k, l }) => (
-              <button key={k} onClick={() => setSortBy(k)}
-                className="px-3 py-1 rounded-md text-xs font-semibold transition-all"
-                style={{ background: sortBy===k ? "#1D4ED8" : "transparent", color: sortBy===k ? "#fff" : "#6B7280" }}>
-                {l}
-              </button>
-            ))}
-
-            <button
-              onClick={() => setShowSortExtras(prev => !prev)}
-              className="px-2 py-1 rounded-md text-xs font-semibold transition-all"
-              style={{ background: showSortExtras ? "#1D4ED8" : "transparent", color: showSortExtras ? "#fff" : "#6B7280" }}>
-              ...
-            </button>
-
-            {showSortExtras && (
-              <div className="absolute top-full mt-1 right-0 w-max bg-white border border-slate-200 rounded-lg shadow-lg p-2 z-20">
-                {[{ k:"roic", l:"ROIC" }, { k:"fcf", l:"FCF Yield" }].map(({ k, l }) => (
-                  <button key={k} onClick={() => { setSortBy(k); setShowSortExtras(false); }}
-                    className="block w-full text-left px-3 py-1 text-xs font-semibold rounded-md hover:bg-blue-50"
-                    style={{ color: sortBy===k ? "#1D4ED8" : "#334155" }}>
-                    {l}
-                  </button>
-                ))}
+      {/* ── MARKET COVERAGE ── */}
+      <div className="max-w-7xl mx-auto px-6 pb-20">
+        <div className="bg-white dark:bg-[#0D1117] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden" 
+          style={{ background: darkMode ? '#0D1117' : '#fff' }}>
+          <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Market Coverage & Valuations</h2>
+            <div className="flex items-center gap-3">
+              <div className="relative h-9">
+                <input
+                  type="text"
+                  placeholder="Search ticker..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="pl-9 pr-4 h-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-500/50 text-slate-800 dark:text-slate-100 transition-colors"
+                />
+                <div className="absolute left-3 top-2.5 text-slate-500">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
               </div>
-            )}
-          </div>
-
-          <div className="flex gap-1 bg-gray-50 rounded-lg p-1" style={{ border:"1px solid #E5E7EB" }}>
-            {["All","Subvaloradas","Sobrevaloradas"].map(f => (
-              <button key={f} onClick={() => setFilterVal(f)}
-                className="px-3 py-1 rounded-md text-xs font-semibold transition-all"
-                style={{ background: filterValuation===f ? (f==="Sobrevaloradas"?"#EF4444":"#1D4ED8") : "transparent", color: filterValuation===f ? "#fff" : "#6B7280" }}>
-                {f==="All" ? "Todas" : f}
+              <button className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold rounded-lg uppercase tracking-wider border border-slate-200 dark:border-slate-700"
+                style={{ background: darkMode ? '#1F2937' : '#F1F5F9' }}>
+                Export CSV
               </button>
-            ))}
-          </div>
-
-          <select value={filterSector} onChange={e => setFilterSector(e.target.value)}
-            className="px-3 py-1.5 text-xs rounded-lg outline-none"
-            style={{ border:"1px solid #E5E7EB", background:"#F9FAFB", color:"#374151" }}>
-            {sectors.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-
-          <div className="ml-auto flex items-center gap-3">
-            <span className="text-xs text-gray-400">{data.length} resultados</span>
-            <div className="flex gap-1 rounded-lg p-1 w-fit bg-slate-100 border border-slate-200">
-              <button
-                onClick={() => setView("cards")}
-                title="Vista tarjetas"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all"
-                style={{
-                  background: view === "cards" ? "#374151" : "transparent",
-                  color: view === "cards" ? "#fff" : "#64748B"
-                }}>
-                <IconGrid /> Cards
-              </button>
-              <button
-                onClick={() => setView("table")}
-                title="Vista tabla"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all"
-                style={{ background: view === "table" ? "#374151" : "transparent", color: view === "table" ? "#fff" : "#64748B" }}>
-                <IconTable /> Tabla
-              </button>
+              <button className="px-4 py-2 bg-blue-600 text-white text-[10px] font-bold rounded-lg uppercase tracking-wider border border-blue-700 shadow-sm shadow-blue-500/20">Add Ticker</button>
             </div>
           </div>
+          
+          <TableView data={data} onSelect={setSelected} darkMode={darkMode} showAll={showAll} />
+          
+          {!showAll && data.length > 5 && (
+            <div className="px-6 py-4 bg-slate-50 dark:bg-[#0D1117] border-t border-slate-100 dark:border-slate-800 flex justify-center transition-colors"
+               style={{ background: darkMode ? '#0D1117' : '#F8FAFC' }}>
+              <button 
+                onClick={() => setShowAll(true)}
+                className="text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-widest hover:text-blue-400 dark:hover:text-blue-300 transition-colors"
+              >
+                View Full List ({data.length} Stocks)
+              </button>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* ── SCENARIO ASYMMETRY CHART ── */}
-      <div className="max-w-7xl mx-auto px-6 py-4">
-        <ScenarioAsymmetryChart data={data} />
-      </div>
-
-      {/* ── CONTENT ── */}
-      {view === "cards" ? (
-        <>
-          <div className="max-w-7xl mx-auto px-6 pt-4 pb-2 flex items-center gap-5 text-xs text-gray-400">
-            <span className="flex items-center gap-1.5"><span className="inline-block w-0.5 h-4 bg-gray-700 rounded"/>Precio actual</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block w-2 h-3 rounded-sm bg-red-400"/>Bear</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block w-2 h-3 rounded-sm bg-blue-500"/>Base</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block w-2 h-3 rounded-sm bg-green-500"/>Bull</span>
-          </div>
-          <div className="max-w-7xl mx-auto px-6 pb-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {data.map(stock => <Card key={stock.ticker} stock={stock} onClick={setSelected}/>)}
-          </div>
-        </>
-      ) : (
-        <TableView data={data} onSelect={setSelected} />
-      )}
 
       {/* ── STRATEGIC MAP ── */}
-      <StrategicMap data={data} />
+      <StrategicMap data={data} darkMode={darkMode} />
 
       {/* ── CONTEXTUAL INTELLIGENCE FLAGS ── */}
-      <ContextualFlags data={data} />
+      <ContextualFlags data={data} darkMode={darkMode} />
 
-      <Modal stock={selected} onClose={() => setSelected(null)}/>
+      <Modal stock={selected} onClose={() => setSelected(null)} darkMode={darkMode}/>
     </div>
   );
 }
 
 // ─── Strategic Map Component ─────────────────────────────────────────────────────
-function StrategicMap({ data }) {
+function StrategicMap({ data, darkMode }) {
   const [hoveredStock, setHoveredStock] = useState(null);
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -1149,12 +1090,13 @@ function StrategicMap({ data }) {
   
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
-      <div className="bg-white rounded-2xl p-6" style={{ border: "1px solid #E5E7EB" }}>
+      <div className="bg-white dark:bg-[#0D1117] rounded-2xl p-6 transition-colors border border-slate-200 dark:border-slate-800"
+        style={{ background: darkMode ? '#0D1117' : '#fff' }}>
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Mapa Estratégico (Radar)</h2>
-            <p className="text-xs text-gray-500 mt-1">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100">Mapa Estratégico (Radar)</h2>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
               ROIC vs Margen de Seguridad • Tamaño = Score
             </p>
           </div>
@@ -1209,32 +1151,32 @@ function StrategicMap({ data }) {
             
             {/* Grid lines */}
             {[0, 15, 30, 45, 60].map(y => (
-              <line key={`y-${y}`} x1={padding.left} y1={yScale(y)} x2={chartWidth - padding.right} y2={yScale(y)} stroke="#334155" strokeWidth="1" strokeDasharray="3,3" opacity="0.2" />
+              <line key={`y-${y}`} x1={padding.left} y1={yScale(y)} x2={chartWidth - padding.right} y2={yScale(y)} stroke="var(--chart-grid)" strokeWidth="1" strokeDasharray="3,3" opacity="0.4" />
             ))}
             {[-75, -37.5, 0, 37.5, 75, 112.5, 150, 187.5, 225].map(x => (
-              <line key={`x-${x}`} x1={xScale(x)} y1={padding.top} x2={xScale(x)} y2={chartHeight - padding.bottom} stroke="#334155" strokeWidth="1" strokeDasharray="3,3" opacity="0.2" />
+              <line key={`x-${x}`} x1={xScale(x)} y1={padding.top} x2={xScale(x)} y2={chartHeight - padding.bottom} stroke="var(--chart-grid)" strokeWidth="1" strokeDasharray="3,3" opacity="0.4" />
             ))}
             
             {/* Reference lines - solid and more prominent */}
-            <line x1={xMOS30} y1={padding.top} x2={xMOS30} y2={chartHeight - padding.bottom} stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="5,5" />
-            <line x1={padding.left} y1={yROI} x2={chartWidth - padding.right} y2={yROI} stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="5,5" />
+            <line x1={xMOS30} y1={padding.top} x2={xMOS30} y2={chartHeight - padding.bottom} stroke="var(--chart-text)" strokeWidth="1.5" strokeDasharray="5,5" opacity="0.3" />
+            <line x1={padding.left} y1={yROI} x2={chartWidth - padding.right} y2={yROI} stroke="var(--chart-text)" strokeWidth="1.5" strokeDasharray="5,5" opacity="0.3" />
             
             {/* Reference labels */}
-            <text x={xMOS30} y={padding.top - 8} textAnchor="middle" fill="#94A3B8" fontSize="9" fontWeight="500">MOS 30%</text>
-            <text x={chartWidth - padding.right + 8} y={yROI + 3} textAnchor="start" fill="#94A3B8" fontSize="9" fontWeight="500">ROI 22%</text>
+            <text x={xMOS30} y={padding.top - 8} textAnchor="middle" fill="var(--chart-text)" fontSize="9" fontWeight="500">MOS 30%</text>
+            <text x={chartWidth - padding.right + 8} y={yROI + 3} textAnchor="start" fill="var(--chart-text)" fontSize="9" fontWeight="500">ROI 22%</text>
             
             {/* Axes labels */}
-            <text x={chartWidth / 2} y={chartHeight - 10} textAnchor="middle" fill="#6B7280" fontSize="10" fontWeight="500">VALOR (MOS %)</text>
-            <text x={18} y={chartHeight / 2} textAnchor="middle" fill="#6B7280" fontSize="10" fontWeight="500" transform={`rotate(-90, 18, ${chartHeight / 2})`}>CALIDAD (ROIC %)</text>
+            <text x={chartWidth / 2} y={chartHeight - 10} textAnchor="middle" fill="var(--chart-text)" fontSize="10" fontWeight="500">VALOR (MOS %)</text>
+            <text x={18} y={chartHeight / 2} textAnchor="middle" fill="var(--chart-text)" fontSize="10" fontWeight="500" transform={`rotate(-90, 18, ${chartHeight / 2})`}>CALIDAD (ROIC %)</text>
             
             {/* X-axis labels */}
             {[-75, 0, 75, 150, 225].map(x => (
-              <text key={`xlabel-${x}`} x={xScale(x)} y={chartHeight - padding.bottom + 14} textAnchor="middle" fill="#6B7280" fontSize="9">{x}%</text>
+              <text key={`xlabel-${x}`} x={xScale(x)} y={chartHeight - padding.bottom + 14} textAnchor="middle" fill="var(--chart-text)" fontSize="9">{x}%</text>
             ))}
             
             {/* Y-axis labels */}
             {[0, 15, 30, 45, 60].map(y => (
-              <text key={`ylabel-${y}`} x={padding.left - 6} y={yScale(y) + 3} textAnchor="end" fill="#6B7280" fontSize="9">{y}%</text>
+              <text key={`ylabel-${y}`} x={padding.left - 6} y={yScale(y) + 3} textAnchor="end" fill="var(--chart-text)" fontSize="9">{y}%</text>
             ))}
             
             {/* Data points */}
@@ -1294,12 +1236,12 @@ function StrategicMap({ data }) {
             return (
               <div
                 key={`label-${point.ticker}`}
-                className="absolute text-[10px] font-bold text-gray-700 pointer-events-none"
+                className="absolute text-[10px] font-bold text-gray-700 dark:text-slate-300 pointer-events-none"
                 style={{
                   left: `${x}px`,
                   top: `${y - radius - 6}px`,
                   transform: 'translateX(-50%)',
-                  textShadow: '0 1px 2px rgba(255,255,255,0.9)',
+                  textShadow: darkMode ? '0 1px 2px rgba(0,0,0,0.8)' : '0 1px 2px rgba(255,255,255,0.9)',
                   opacity: hoveredStock && hoveredStock !== point.ticker ? 0.4 : 1,
                   transition: 'opacity 0.2s'
                 }}
@@ -1380,7 +1322,7 @@ function StrategicMap({ data }) {
 }
 
 // ─── Contextual Flags Component ──────────────────────────────────────────────
-function ContextualFlags({ data }) {
+function ContextualFlags({ data, darkMode }) {
   // Helper to get tickers matching criteria
   const getTickers = (criteria) => data.filter(criteria).map(d => d.ticker);
   
@@ -1457,26 +1399,26 @@ function ContextualFlags({ data }) {
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
       <div className="mb-6">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Inteligencia Contextual</p>
-        <h2 className="text-xl font-bold text-gray-900">Flags de Segundo Orden</h2>
+        <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-widest mb-2">Inteligencia Contextual</p>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">Flags de Segundo Orden</h2>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {flags.map((flag) => (
           <div
             key={flag.id}
-            className="rounded-xl p-5 transition-all duration-200 hover:shadow-md"
+            className="rounded-xl p-5 transition-all duration-200 hover:shadow-md bg-white dark:bg-slate-800"
             style={{
-              background: flag.bgColor,
+              background: darkMode ? (flag.bgColor.includes('FDF') ? '#064e3b33' : flag.bgColor.includes('FBE') ? '#78350f33' : flag.bgColor.includes('F9F') ? '#0c4a6e33' : flag.bgColor.includes('F3F') ? '#581c8733' : '#1e293b') : flag.bgColor,
               borderLeft: `4px solid ${flag.borderColor}`,
-              border: `1px solid ${flag.borderColor}`
+              border: `1px solid ${darkMode ? '#334155' : flag.borderColor}`
             }}
           >
             {/* Header */}
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-xl">{flag.icon}</span>
-                <h3 className="font-bold text-gray-900">{flag.title}</h3>
+                <h3 className="font-bold text-gray-900 dark:text-slate-100">{flag.title}</h3>
               </div>
               <span
                 className="text-xs font-bold px-2 py-1 rounded-full"
@@ -1490,7 +1432,7 @@ function ContextualFlags({ data }) {
             </div>
             
             {/* Description */}
-            <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+            <p className="text-sm text-gray-600 dark:text-slate-400 mb-4 leading-relaxed">
               {flag.description}
             </p>
             
