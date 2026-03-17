@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import App from './valuation-dashboard.tsx'
+import App from './screener-sp500.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
